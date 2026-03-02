@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { useMorphoLoan } from "../hooks/useMorphoLoan";
 import { usePrivy } from "@privy-io/react-auth";
 import { CheckCircleIcon, ArrowPathIcon, BanknotesIcon, CircleStackIcon, LockClosedIcon, CreditCardIcon, ChartBarIcon } from "@heroicons/react/24/outline";
+import Button from "./Button";
+import BalancesGrid from "./BalancesGrid";
+import Input from "./Input";
 
 export default function PrestamoRapido() {
     const { authenticated, login } = usePrivy();
@@ -83,50 +86,22 @@ export default function PrestamoRapido() {
                         </div>
                     ) : (
                         <>
-                            {/* Balances Grid */}
-                            <div className="grid grid-cols-3 gap-2 mb-2 p-2 mt-16 bg-[#0a0a0a] rounded-xl">
-                                {/* Row 1 */}
-                                <div className="text-center">
-                                    <div className="text-[10px] uppercase text-white font-bold mb-1 flex items-center justify-center gap-1">
-                                        <CircleStackIcon className="w-3 h-3 text-[#4fe3c3]" /> USDC
-                                    </div>
-                                    <div className="font-mono text-xs text-white truncate">{usdcBalance} USDC</div>
-                                </div>
-                                <div className="text-center border-l border-[#264c73]">
-                                    <div className="text-[10px] uppercase text-white font-bold mb-1 flex items-center justify-center gap-1">
-                                        <BanknotesIcon className="w-3 h-3 text-[#4fe3c3]" /> CCOP
-                                    </div>
-                                    <div className="font-mono text-xs text-white truncate">{ccopBalance} CCOP</div>
-                                </div>
-                                <div className="text-center border-l border-[#264c73]">
-                                    <div className="text-[10px] uppercase text-white font-bold mb-1 flex items-center justify-center gap-1">
-                                        <LockClosedIcon className="w-3 h-3 text-[#4fe3c3]" /> Collateral
-                                    </div>
-                                    <div className="font-mono text-xs text-gray-200 truncate">{collateralBalance} waUSDC</div>
-                                </div>
-
-                                {/* Row 2 (New Stats) */}
-                                <div className="col-span-3 h-px bg-[#264c73] my-1" />
-
-                                <div className="text-center">
-                                    <div className="text-[10px] uppercase text-white font-bold mb-1 flex items-center justify-center gap-1">
-                                        <CreditCardIcon className="w-3 h-3 text-[#4fe3c3]" /> Current Debt
-                                    </div>
-                                    <div className="font-mono text-xs text-gray-200 truncate">{borrowBalance} CCOP</div>
-                                </div>
-                                <div className="text-center border-l border-[#264c73]">
-                                    <div className="text-[10px] uppercase text-white font-bold mb-1 flex items-center justify-center gap-1">
-                                        <ChartBarIcon className="w-3 h-3 text-[#4fe3c3]" /> Rate (APR)
-                                    </div>
-                                    <div className="font-mono text-xs text-gray-200 truncate">{marketAPR}%</div>
-                                </div>
-                                <div className="text-center border-l border-[#264c73]">
-                                    <div className="text-[10px] uppercase text-white font-bold mb-1 flex items-center justify-center gap-1">
-                                        <CircleStackIcon className="w-3 h-3 text-[#4fe3c3]" /> Liquidity
-                                    </div>
-                                    <div className="font-mono text-xs text-gray-200 truncate">{marketLiquidity} CCOP</div>
-                                </div>
-                            </div>
+                            <BalancesGrid
+                                columns={3}
+                                className="mb-2 mt-16"
+                                rows={[
+                                    [
+                                        { label: "USDC", value: `${usdcBalance} USDC`, icon: CircleStackIcon, highlightValue: true },
+                                        { label: "CCOP", value: `${ccopBalance} CCOP`, icon: BanknotesIcon, highlightValue: true },
+                                        { label: "Collateral", value: `${collateralBalance} waUSDC`, icon: LockClosedIcon }
+                                    ],
+                                    [
+                                        { label: "Current Debt", value: `${borrowBalance} CCOP`, icon: CreditCardIcon },
+                                        { label: "Rate (APR)", value: `${marketAPR}%`, icon: ChartBarIcon },
+                                        { label: "Liquidity", value: `${marketLiquidity} CCOP`, icon: CircleStackIcon }
+                                    ]
+                                ]}
+                            />
 
                             {step === 8 ? (
                                 <div className="py-8 text-center space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
@@ -140,15 +115,15 @@ export default function PrestamoRapido() {
                                         </p>
                                     </div>
 
-                                    <button
+                                    <Button
                                         onClick={() => {
                                             setBorrowAmount("");
                                             resetState();
                                         }}
-                                        className="w-full cursor-pointer py-4 px-6 bg-[#264c73] hover:bg-[#4fe3c3] text-white hover:text-[#0a0a0a] font-bold rounded-xl transition-all transform hover:-translate-y-1"
+                                        className="transform hover:-translate-y-1"
                                     >
                                         Perform Another Operation
-                                    </button>
+                                    </Button>
                                 </div>
                             ) : step === 16 ? (
                                 <div className="py-8 text-center space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
@@ -169,37 +144,26 @@ export default function PrestamoRapido() {
                                         </div>
                                     </div>
 
-                                    <button
+                                    <Button
                                         onClick={() => {
                                             setBorrowAmount("");
                                             resetState();
                                         }}
-                                        className="w-full cursor-pointer py-4 px-6 bg-[#264c73] hover:bg-[#4fe3c3] text-white hover:text-[#0a0a0a] font-bold rounded-xl transition-all transform hover:-translate-y-1"
+                                        className="transform hover:-translate-y-1"
                                     >
                                         Back to Home
-                                    </button>
+                                    </Button>
                                 </div>
                             ) : (
                                 /* Input Section */
                                 <div className="space-y-6 py-6">
-                                    <div className="group">
-                                        <label className="block text-xs font-medium text-white mb-2 uppercase tracking-wide">
-                                            How much CCOP do you want to receive?
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                value={borrowAmount}
-                                                onChange={(e) => setBorrowAmount(e.target.value)}
-                                                placeholder="0.00"
-                                                className="w-full bg-[#0a0a0a] border border-[#264c73] rounded-xl px-4 py-3 text-white text-lg focus:outline-none focus:border-[#4fe3c3] transition-all placeholder:text-gray-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                disabled={loading}
-                                            />
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                <span className="text-sm font-semibold text-gray-200">CCOP</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    {/* Input */}
+                                    <Input
+                                        label="How much CCOP do you want to receive?"
+                                        value={borrowAmount}
+                                        onChange={(e) => setBorrowAmount(e.target.value)}
+                                        disabled={loading}
+                                    />
 
                                     {/* Simulation Output */}
                                     <div className="p-4 rounded-xl bg-[#0a0a0a] border border-[#264c73] space-y-3">
@@ -282,18 +246,9 @@ export default function PrestamoRapido() {
                                         </div>
                                     )}
 
-                                    {/* Action Button */}
-                                    <button
+                                    <Button
                                         onClick={handleBorrow}
                                         disabled={loading || !borrowAmount || parseFloat(borrowAmount) <= 0 || isInsufficientBalance || isExceedingLiquidity}
-                                        className={`w-full cursor-pointer py-4 px-6 rounded-xl font-bold text-lg transition-all 
-        ${(loading || !borrowAmount || parseFloat(borrowAmount) <= 0)
-                                                ? 'bg-[#0a0a0a] text-gray-200 cursor-not-allowed border border-[#264c73]'
-                                                : (isInsufficientBalance || isExceedingLiquidity)
-                                                    ? 'bg-[#0a0a0a] text-gray-200 border border-[#264c73] cursor-not-allowed'
-                                                    : 'bg-[#264c73] hover:bg-[#4fe3c3] text-white hover:text-[#0a0a0a] border border-[#264c73]'
-                                            }
-    `}
                                     >
                                         {loading ? (
                                             <span className="flex items-center justify-center gap-2 text-[#4fe3c3]">
@@ -305,16 +260,17 @@ export default function PrestamoRapido() {
                                         ) : (
                                             "Deposit and Borrow"
                                         )}
-                                    </button>
+                                    </Button>
 
                                     {/* Repay Button - Only show if user has debt or collateral */}
                                     {(!loading && (parseFloat(borrowBalance) > 0 || parseFloat(collateralBalance) > 0)) && (
-                                        <button
+                                        <Button
                                             onClick={executeRepayAndWithdraw}
-                                            className="w-full mt-4 cursor-pointer py-3 px-6 rounded-xl font-bold text-sm bg-[#0a0a0a] text-[#4fe3c3] border border-[#264c73] hover:bg-[#264c73] hover:text-white transition-all"
+                                            isWithdraw
+                                            className="mt-4"
                                         >
                                             Pay All and Withdraw
-                                        </button>
+                                        </Button>
                                     )}
                                 </div>
                             )}
