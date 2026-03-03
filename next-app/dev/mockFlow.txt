@@ -1,0 +1,42 @@
+Here is the list of created files:
+
+GenericMockERC20.sol: A generic ERC20 token with a public mint function. Use this to deploy mocks for USDC and CCOP.
+MockAToken.sol: A mock aToken (e.g., aUSDC) that allows the MockAavePool to mint and burn tokens.
+MockAavePool.sol: Simulates the Aave Lending Pool. It handles supply (deposit) and withdraw of assets, minting/burning the corresponding aTokens.
+MockMorpho.sol: Simulates the Morpho Blue protocol. It handles markets, positions, supplying collateral, borrowing, and repaying.
+MockVault.sol: Simulates an ERC4626 vault. Use this for waUSDC (wrapping aUSDC) and morphoCCOPVault (wrapping CCOP).
+MockIRM.sol: A mock Interest Rate Model that returns a fixed borrow rate.
+MockOracle.sol: A mock Oracle that returns a fixed price (1:1 default).
+Deployment Guide
+To replicate the setup on Avalanche Fuji, deploy the contracts in the following order:
+
+Deploy USDC Mock:
+Contract: GenericMockERC20
+Args: ("USDC Mock", "USDC", 6)
+Deploy CCOP Mock:
+Contract: GenericMockERC20
+Args: ("CCOP Mock", "CCOP", 6)
+Deploy Aave Pool Mock:
+Contract: MockAavePool
+Args: ()
+Deploy aUSDC Mock:
+Contract: MockAToken
+Args: ("Aave USDC Mock", "aUSDC", <MockAavePool_Address>, <USDC_Address>)
+Configure Aave Pool:
+Call setAToken on MockAavePool: (<USDC_Address>, <aUSDC_Address>)
+Deploy waUSDC Vault:
+Contract: MockVault
+Args: ("Wrapped Aave USDC", "waUSDC", <aUSDC_Address>)
+Deploy Morpho Mock:
+Contract: MockMorpho
+Args: ()
+Deploy IRM Mock:
+Contract: MockIRM
+Args: ()
+Deploy Oracle Mock:
+Contract: MockOracle
+Args: ()
+Deploy Morpho CCOP Vault:
+Contract: MockVault
+Args: ("Morpho CCOP Vault", "mCCOP", <CCOP_Address>)
+After deployment, update your contracts.ts file with the new addresses for Avalanche Fuji
