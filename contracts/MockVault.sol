@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MockVault is ERC20, Ownable {
     IERC20 public assetToken;
+    uint8 private _decimals = 6;
 
     constructor(string memory name, string memory symbol, address _asset) ERC20(name, symbol) Ownable(msg.sender) {
         assetToken = IERC20(_asset);
@@ -32,6 +33,10 @@ contract MockVault is ERC20, Ownable {
         return shares;
     }
 
+    function setAssetToken(address _asset) external onlyOwner {
+        assetToken = IERC20(_asset);
+    }
+
     function deposit(uint256 assets, address receiver) external returns (uint256) {
         require(assets > 0, "Zero assets");
         assetToken.transferFrom(msg.sender, address(this), assets);
@@ -49,5 +54,9 @@ contract MockVault is ERC20, Ownable {
         _burn(owner, shares);
         assetToken.transfer(receiver, shares);
         return shares;
+    }
+
+    function decimals() public view override returns (uint8) {
+        return _decimals;
     }
 }
