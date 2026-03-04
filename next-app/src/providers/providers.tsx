@@ -2,12 +2,8 @@
 
 import { useMemo } from 'react';
 import { PrivyProvider } from "@privy-io/react-auth";
-import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
-import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 // Replace this with any of the networks listed at https://github.com/wevm/viem/blob/main/src/chains/index.ts
-import { base, arbitrum, baseSepolia, arbitrumSepolia } from 'viem/chains';
-
-const solanaConnectors = toSolanaWalletConnectors();
+import { avalancheFuji } from 'viem/chains';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
@@ -19,31 +15,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       },
     },
     appearance: { walletChainType: "ethereum-only" },
-    // externalWallets: { solana: { connectors: solanaConnectors } },
-    defaultChain: baseSepolia,
-    supportedChains: [baseSepolia, arbitrumSepolia, base, arbitrum],
-    /* solana: {
-      rpcs: {
-        "solana:mainnet": {
-          rpc: createSolanaRpc(
-            process.env.NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL ||
-            "https://api.mainnet-beta.solana.com",
-          ),
-          rpcSubscriptions: createSolanaRpcSubscriptions(
-            process.env.NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL?.replace(
-              "http",
-              "ws",
-            ) || "wss://api.mainnet-beta.solana.com",
-          ),
-        },
-        "solana:devnet": {
-          rpc: createSolanaRpc("https://api.devnet.solana.com"),
-          rpcSubscriptions: createSolanaRpcSubscriptions(
-            "wss://api.devnet.solana.com",
-          ),
-        },
-      },
-    }, */
+    defaultChain: avalancheFuji,
+    supportedChains: [avalancheFuji],
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
 

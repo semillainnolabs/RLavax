@@ -6,53 +6,44 @@ export const BASE_SEPOLIA_CONFIG = {
     blockExplorer: "https://sepolia.basescan.org",
 };
 
+export const AVAX_FUJI_CONFIG = {
+    chainId: 43113,
+    rpcUrl: "https://api.avax-test.network/ext/bc/C/rpc",
+    blockExplorer: "https://subnets-test.avax.network/",
+};
+
 export const CONTRACT_ADDRESSES = {
-    // Base Sepolia Token Addresses
-    usdc: "0xba50cd2a20f6da35d788639e581bca8d0b5d4d5f",
-    mockMXNB: "0xF19D2F986DC0fb7E2A82cb9b55f7676967F7bC3E",
-    mockCCOP: "0x789D299321f194B47f3b72d33d0e028376277AA3",
+    // Avax Fuji Token Addresses
+    usdc: "0x789D299321f194B47f3b72d33d0e028376277AA3",
+    mockMXNB: "0x1DA5199ecaAe23F85c7fd7611703E81273041149",
 
     // Wrapper & Vault Addresses
-    wmUSDC: "0xBDc7fCDAC92DEe5220215aB6a0f5E1B20A665CD4",
-    waUSDC: "0x1DA5199ecaAe23F85c7fd7611703E81273041149",
-    morphoUSDCVault: "0xA694354Ab641DFB8C6fC47Ceb9223D12cCC373f9",
-    morphoMXNBVault: "0x3F8FAB03021738f227e3Ad76da51f57522540d30",
-    morphoCCOPVault: "0xb71015e968155BEA6F06ff0D3422B74F38A83608",
+    waUSDC: "0x9Eb972888Bc1D52B0cAB77ED00Cfd911Be92F44a",
+    morphoMXNBVault: "0x",// pending to be deployed
+    irm: "0x3623f733b587FE63F7365648312E007148a15bB5",
 
     // Aave
-    aavePool: "0x8bAB6d1b75f19e9eD9fCe8b9BD338844fF79aE27",
-    aUSDC: "0x10f1a9d11cdf50041f3f8cb7191cbe2f31750acc",
+    aavePool: "0x2a2e2346404fab3b4B521f2eA4D052D5BA10aaB6",
+    aUSDC: "0xC39F2C3522ed1C2E8bCb40D34445f6Eacc94bEBE",
 
     // Morpho Addresses
-    morphoBlue: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+    morphoBlue: "0xBF36b45ccD42a178ac8b22e7271d87abbBE7c8a2",
 
     // Oracle Addresses
-    wmusdcMxnbOracle: "0x9f4b138BF3513866153Af9f0A2794096DFebFaD4",
-    ethUsdcOracle: "0x97EBCdb0F784CDc9F91490bEBC9C8756491814a3",
-    fixedPriceOracle: "0xa8B8bBc0A572803A9153336122EBc971DeF60672",
+    fixedPriceOracle: "0xB376ebF210a64AE13A33DDB58047B6BF9E326330",
 };
 
 export const MARKET_IDS = {
-    usdc: "0x6af42641dd1ddc4fd0c3648e45497a29b78eb50d21fd0f6eac7b8eae2192dd47",
-    mxnb: "0x8c9e372746f3d610f000b38783c39d03cf5b010c224bb581de0b7e9fc59af6c5",
-    ccop: "0x9e745eaf869d3f5112802a512d07f3ccab77233e8cb245a7d762bb6e8fdc9f69",
+    mxnb: "0x45e15b1dc3fcb1a89af05cbaf3e3029be4a95c7e021f799ec4fe283e11cbaac6",
 };
 
 // Morpho Blue Market Params Tuple
 // [loanToken, collateralToken, oracle, irm, lltv]
 export const MXNB_MARKET_PARAMS = {
     loanToken: CONTRACT_ADDRESSES.mockMXNB,
-    collateralToken: CONTRACT_ADDRESSES.wmUSDC,
-    oracle: CONTRACT_ADDRESSES.wmusdcMxnbOracle,
-    irm: "0x46415998764C29aB2a25CbeA6254146D50D22687",
-    lltv: ethers.parseEther("0.77")
-};
-
-export const CCOP_MARKET_PARAMS = {
-    loanToken: CONTRACT_ADDRESSES.mockCCOP,
     collateralToken: CONTRACT_ADDRESSES.waUSDC,
     oracle: CONTRACT_ADDRESSES.fixedPriceOracle,
-    irm: "0x46415998764C29aB2a25CbeA6254146D50D22687",
+    irm: CONTRACT_ADDRESSES.irm,
     lltv: ethers.parseEther("0.77")
 };
 

@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useWallets } from '@privy-io/react-auth';
 import {
-    BASE_SEPOLIA_CONFIG,
+    AVAX_FUJI_CONFIG,
     CONTRACT_ADDRESSES,
     ERC20_ABI,
     VAULT_ABI,
     MORPHO_ABI,
     IRM_ABI,
     AAVE_ABI,
-    CCOP_MARKET_PARAMS,
+    MXNB_MARKET_PARAMS,
     MARKET_IDS,
 } from '../constants/contracts';
 
@@ -59,14 +59,14 @@ export const useMorphoLoan = () => {
             const signer = await getSigner();
             const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, signer);
 
-            const marketDetails = await morpho.market(MARKET_IDS.ccop);
+            const marketDetails = await morpho.market(MARKET_IDS.mxnb);
             const totalSupplyAssets = Number(ethers.formatUnits(marketDetails.totalSupplyAssets, CCOP_DECIMALS));
             const totalBorrowAssets = Number(ethers.formatUnits(marketDetails.totalBorrowAssets, CCOP_DECIMALS));
 
             setTotalSupplied(totalSupplyAssets);
             setTotalBorrowed(totalBorrowAssets);
 
-            const irmContract = new ethers.Contract(CCOP_MARKET_PARAMS.irm, IRM_ABI, signer);
+            const irmContract = new ethers.Contract(MXNB_MARKET_PARAMS.irm, IRM_ABI, signer);
             const marketTuple = [
                 marketDetails[0], marketDetails[1], marketDetails[2],
                 marketDetails[3], marketDetails[4], marketDetails[5],
@@ -74,11 +74,11 @@ export const useMorphoLoan = () => {
 
             const borrowRate = await irmContract.borrowRateView(
                 [
-                    CCOP_MARKET_PARAMS.loanToken,
-                    CCOP_MARKET_PARAMS.collateralToken,
-                    CCOP_MARKET_PARAMS.oracle,
-                    CCOP_MARKET_PARAMS.irm,
-                    CCOP_MARKET_PARAMS.lltv,
+                    MXNB_MARKET_PARAMS.loanToken,
+                    MXNB_MARKET_PARAMS.collateralToken,
+                    MXNB_MARKET_PARAMS.oracle,
+                    MXNB_MARKET_PARAMS.irm,
+                    MXNB_MARKET_PARAMS.lltv,
                 ],
                 marketTuple
             );
@@ -103,7 +103,7 @@ export const useMorphoLoan = () => {
             const bal = await usdcContract.balanceOf(userAddress);
             setUsdcBalance(formatBalance(bal, USDC_DECIMALS));
 
-            const ccopContract = new ethers.Contract(CONTRACT_ADDRESSES.mockCCOP, ERC20_ABI, signer);
+            const ccopContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
             const targetBalance = await ccopContract.balanceOf(userAddress);
             setCcopBalance(formatBalance(targetBalance, CCOP_DECIMALS));
 
@@ -111,11 +111,11 @@ export const useMorphoLoan = () => {
                 ethers.AbiCoder.defaultAbiCoder().encode(
                     ["address", "address", "address", "address", "uint256"],
                     [
-                        CCOP_MARKET_PARAMS.loanToken,
-                        CCOP_MARKET_PARAMS.collateralToken,
-                        CCOP_MARKET_PARAMS.oracle,
-                        CCOP_MARKET_PARAMS.irm,
-                        CCOP_MARKET_PARAMS.lltv
+                        MXNB_MARKET_PARAMS.loanToken,
+                        MXNB_MARKET_PARAMS.collateralToken,
+                        MXNB_MARKET_PARAMS.oracle,
+                        MXNB_MARKET_PARAMS.irm,
+                        MXNB_MARKET_PARAMS.lltv
                     ]
                 )
             );
@@ -134,7 +134,7 @@ export const useMorphoLoan = () => {
             const safeLiquidity = liquidityAssets > 0n ? liquidityAssets : 0n;
             setMarketLiquidity(formatBalance(safeLiquidity, CCOP_DECIMALS));
 
-            const oracle = new ethers.Contract(CCOP_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], signer);
+            const oracle = new ethers.Contract(MXNB_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], signer);
             const price = await oracle.price();
             setOraclePrice(price);
 
@@ -220,7 +220,7 @@ export const useMorphoLoan = () => {
 
             const provider = signer.provider;
             const network = await provider?.getNetwork();
-            if (network?.chainId !== BigInt(BASE_SEPOLIA_CONFIG.chainId)) {
+            if (network?.chainId !== BigInt(AVAX_FUJI_CONFIG.chainId)) {
                 throw new Error("Wrong network detected during execution.");
             }
 
@@ -232,7 +232,7 @@ export const useMorphoLoan = () => {
             const waUSDC = new ethers.Contract(CONTRACT_ADDRESSES.waUSDC, VAULT_ABI, signer);
             const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, signer);
 
-            const oracle = new ethers.Contract(CCOP_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], signer);
+            const oracle = new ethers.Contract(MXNB_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], signer);
             const currentPrice = await oracle.price();
 
             const borrowAmountBN = ethers.parseUnits(borrowAmountCCOP, CCOP_DECIMALS);
@@ -300,11 +300,11 @@ export const useMorphoLoan = () => {
             setStep(6);
             console.log("Step 6: Supplying Collateral");
             const CCOP_MARKET_PARAMS_ARRAY = [
-                CCOP_MARKET_PARAMS.loanToken,
-                CCOP_MARKET_PARAMS.collateralToken,
-                CCOP_MARKET_PARAMS.oracle,
-                CCOP_MARKET_PARAMS.irm,
-                CCOP_MARKET_PARAMS.lltv
+                MXNB_MARKET_PARAMS.loanToken,
+                MXNB_MARKET_PARAMS.collateralToken,
+                MXNB_MARKET_PARAMS.oracle,
+                MXNB_MARKET_PARAMS.irm,
+                MXNB_MARKET_PARAMS.lltv
             ];
             const currentWaUSDCBalance = await waUSDC.balanceOf(userAddress);
             if (currentWaUSDCBalance <= 0n) throw new Error("Cannot supply 0 collateral.");
@@ -356,18 +356,18 @@ export const useMorphoLoan = () => {
             const signer = await getSigner();
             const userAddress = await signer.getAddress();
 
-            const ccop = new ethers.Contract(CONTRACT_ADDRESSES.mockCCOP, ERC20_ABI, signer);
+            const ccop = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
             const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, signer);
             const waUSDC = new ethers.Contract(CONTRACT_ADDRESSES.waUSDC, VAULT_ABI, signer);
             const aavePool = new ethers.Contract(CONTRACT_ADDRESSES.aavePool, AAVE_ABI, signer);
             const aUSDC = new ethers.Contract(CONTRACT_ADDRESSES.aUSDC, ERC20_ABI, signer);
 
             const CCOP_MARKET_PARAMS_ARRAY = [
-                CCOP_MARKET_PARAMS.loanToken,
-                CCOP_MARKET_PARAMS.collateralToken,
-                CCOP_MARKET_PARAMS.oracle,
-                CCOP_MARKET_PARAMS.irm,
-                CCOP_MARKET_PARAMS.lltv
+                MXNB_MARKET_PARAMS.loanToken,
+                MXNB_MARKET_PARAMS.collateralToken,
+                MXNB_MARKET_PARAMS.oracle,
+                MXNB_MARKET_PARAMS.irm,
+                MXNB_MARKET_PARAMS.lltv
             ];
 
             const marketId = ethers.keccak256(

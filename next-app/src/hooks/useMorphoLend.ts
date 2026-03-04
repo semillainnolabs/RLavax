@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useWallets } from '@privy-io/react-auth';
 import {
-    BASE_SEPOLIA_CONFIG,
+    AVAX_FUJI_CONFIG,
     CONTRACT_ADDRESSES,
     ERC20_ABI,
     VAULT_ABI,
     MORPHO_ABI,
     IRM_ABI,
-    CCOP_MARKET_PARAMS,
+    MXNB_MARKET_PARAMS,
     MARKET_IDS,
 } from '../constants/contracts';
 
@@ -75,7 +75,7 @@ export const useMorphoLend = () => {
             );
 
             // Read market details
-            const marketDetails = await morphoContract.market(MARKET_IDS.ccop);
+            const marketDetails = await morphoContract.market(MARKET_IDS.mxnb);
             const totalSupplyAssets = Number(ethers.formatUnits(marketDetails.totalSupplyAssets, 6));
             const totalBorrowAssets = Number(ethers.formatUnits(marketDetails.totalBorrowAssets, 6));
 
@@ -84,7 +84,7 @@ export const useMorphoLend = () => {
 
             // Read borrow rate from IRM
             const irmContract = new ethers.Contract(
-                CCOP_MARKET_PARAMS.irm,
+                MXNB_MARKET_PARAMS.irm,
                 IRM_ABI,
                 signer
             );
@@ -101,11 +101,11 @@ export const useMorphoLend = () => {
 
             const borrowRate = await irmContract.borrowRateView(
                 [
-                    CCOP_MARKET_PARAMS.loanToken,
-                    CCOP_MARKET_PARAMS.collateralToken,
-                    CCOP_MARKET_PARAMS.oracle,
-                    CCOP_MARKET_PARAMS.irm,
-                    CCOP_MARKET_PARAMS.lltv,
+                    MXNB_MARKET_PARAMS.loanToken,
+                    MXNB_MARKET_PARAMS.collateralToken,
+                    MXNB_MARKET_PARAMS.oracle,
+                    MXNB_MARKET_PARAMS.irm,
+                    MXNB_MARKET_PARAMS.lltv,
                 ],
                 marketTuple
             );
@@ -140,8 +140,8 @@ export const useMorphoLend = () => {
             const signer = await getSigner();
             const userAddress = await signer.getAddress();
 
-            const ccopContract = new ethers.Contract(CONTRACT_ADDRESSES.mockCCOP, ERC20_ABI, signer);
-            const vaultContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoCCOPVault, EXTENDED_VAULT_ABI, signer);
+            const ccopContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
+            const vaultContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoMXNBVault, EXTENDED_VAULT_ABI, signer);
 
             // Parallel reads
             const [
@@ -234,20 +234,20 @@ export const useMorphoLend = () => {
             const signer = await getSigner();
             const userAddress = await signer.getAddress();
 
-            const ccopContract = new ethers.Contract(CONTRACT_ADDRESSES.mockCCOP, ERC20_ABI, signer);
-            const vaultContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoCCOPVault, EXTENDED_VAULT_ABI, signer);
+            const ccopContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
+            const vaultContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoMXNBVault, EXTENDED_VAULT_ABI, signer);
 
             const depositAmountBN = ethers.parseUnits(amountCCOP, CCOP_DECIMALS);
 
             // Step 1: Approve
             console.log("Step 1: Checking CCOP Allowance");
-            const currentAllowance = await ccopContract.allowance(userAddress, CONTRACT_ADDRESSES.morphoCCOPVault);
+            const currentAllowance = await ccopContract.allowance(userAddress, CONTRACT_ADDRESSES.morphoMXNBVault);
 
             if (currentAllowance < depositAmountBN) {
-                const txApprove = await ccopContract.approve(CONTRACT_ADDRESSES.morphoCCOPVault, ethers.MaxUint256, { gasLimit: MANUAL_GAS_LIMIT });
+                const txApprove = await ccopContract.approve(CONTRACT_ADDRESSES.morphoMXNBVault, ethers.MaxUint256, { gasLimit: MANUAL_GAS_LIMIT });
                 setTxHash(txApprove.hash);
                 await txApprove.wait();
-                await waitForAllowance(ccopContract, userAddress, CONTRACT_ADDRESSES.morphoCCOPVault, depositAmountBN);
+                await waitForAllowance(ccopContract, userAddress, CONTRACT_ADDRESSES.morphoMXNBVault, depositAmountBN);
             }
 
             // Capture initial shares balance
@@ -293,7 +293,7 @@ export const useMorphoLend = () => {
         try {
             const signer = await getSigner();
             const userAddress = await signer.getAddress();
-            const vaultContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoCCOPVault, EXTENDED_VAULT_ABI, signer);
+            const vaultContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoMXNBVault, EXTENDED_VAULT_ABI, signer);
 
             let sharesToRedeem: bigint;
 
