@@ -22,7 +22,7 @@ export default function RendimientoRapido() {
         loading,
         step,
         error,
-        ccopBalance,
+        mxnbBalance,
         vaultAssetsBalance,
         tvl,
         apy,
@@ -54,7 +54,7 @@ export default function RendimientoRapido() {
     // Steps mapping
     const getStepLabel = (s: number) => {
         switch (s) {
-            case 1: return "Approving CCOP...";
+            case 1: return "Approving MXNB...";
             case 2: return "Depositing in Vault...";
             case 3: return "Confirming...";
             case 11: return "Withdrawing Liquidity...";
@@ -64,7 +64,7 @@ export default function RendimientoRapido() {
 
     // Derived states
     const hasLiquidity = parseFloat(vaultAssetsBalance) > 0;
-    const isInsufficientBalance = depositAmount && parseFloat(depositAmount) > parseFloat(ccopBalance);
+    const isInsufficientBalance = depositAmount && parseFloat(depositAmount) > parseFloat(mxnbBalance);
 
     return (
         <div className="w-full max-w-md mx-auto p-1">
@@ -76,7 +76,7 @@ export default function RendimientoRapido() {
                     <div className="flex items-center justify-between mb-8">
                         <div>
                             <h2 className="text-2xl w-fit mb-2 border-b-4 border-[#264c73] font-bold text-white">
-                                CCOP Yield
+                                MXNB Yield
                             </h2>
                             <p className="text-sm font-bold text-[#4fe3c3] mt-1">Provide liquidity and earn interest</p>
                         </div>
@@ -102,11 +102,11 @@ export default function RendimientoRapido() {
                                 className="mb-6 mt-14"
                                 rows={[
                                     [
-                                        { label: "Available CCOP", value: `${ccopBalance} CCOP`, icon: WalletIcon, highlightValue: true },
-                                        { label: "Your Liquidity", value: `${vaultAssetsBalance} CCOP`, icon: CircleStackIcon }
+                                        { label: "Available MXNB", value: `${mxnbBalance} MXNB`, icon: WalletIcon, highlightValue: true },
+                                        { label: "Your Liquidity", value: `${vaultAssetsBalance} MXNB`, icon: CircleStackIcon }
                                     ],
                                     [
-                                        { label: "TVL", value: `${tvl} CCOP`, icon: BanknotesIcon },
+                                        { label: "TVL", value: `${tvl} MXNB`, icon: BanknotesIcon },
                                         { label: "APY", value: `${apy}%`, icon: ChartBarIcon }
                                     ]
                                 ]}
@@ -141,11 +141,11 @@ export default function RendimientoRapido() {
                                         <div className="text-sm bg-[#0a0a0a] border border-[#264c73] p-4 rounded-lg space-y-2 text-left">
                                             <div className="flex justify-between">
                                                 <span className="text-gray-200">Total Withdrawn:</span>
-                                                <span className="text-white font-mono">{withdrawnAmount} CCOP</span>
+                                                <span className="text-white font-mono">{withdrawnAmount} MXNB</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-gray-200">Yield Generated:</span>
-                                                <span className="text-[#4fe3c3] font-mono">{yieldEarned || "0.00"} CCOP</span>
+                                                <span className="text-[#4fe3c3] font-mono">{yieldEarned || "0.00"} MXNB</span>
                                             </div>
                                         </div>
                                     </div>
@@ -160,10 +160,10 @@ export default function RendimientoRapido() {
                                     {!loading && (
                                         /* Input */
                                         <Input
-                                            label="How much CCOP do you want to deposit?"
+                                            label="How much MXNB do you want to deposit?"
                                             value={depositAmount}
                                             onChange={(e) => setDepositAmount(e.target.value)}
-                                            onMaxClick={() => setDepositAmount(ccopBalance)}
+                                            onMaxClick={() => setDepositAmount(mxnbBalance)}
                                             errorMessage={isInsufficientBalance && "Insufficient balance"}
                                             disabled={loading}
                                         />
@@ -213,7 +213,7 @@ export default function RendimientoRapido() {
                                             onClick={handleDeposit}
                                             disabled={!!(!depositAmount || parseFloat(depositAmount) <= 0 || isInsufficientBalance)}
                                         >
-                                            Deposit CCOP
+                                            Deposit MXNB
                                         </Button>
                                     )}
 

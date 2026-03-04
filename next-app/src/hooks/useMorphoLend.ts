@@ -12,7 +12,7 @@ import {
     MARKET_IDS,
 } from '../constants/contracts';
 
-const CCOP_DECIMALS = 6;
+const MXNB_DECIMALS = 6;
 const MANUAL_GAS_LIMIT = 500000n;
 
 // Extend VAULT_ABI to include totalAssets which was missing in the constants
@@ -34,7 +34,7 @@ export const useMorphoLend = () => {
     const [yieldEarned, setYieldEarned] = useState<string | null>(null);
 
     // Data States
-    const [ccopBalance, setCcopBalance] = useState<string>("0.000");
+    const [mxnbBalance, setCcopBalance] = useState<string>("0.000");
     const [vaultSharesBalance, setVaultSharesBalance] = useState<string>("0.000");
     const [vaultAssetsBalance, setVaultAssetsBalance] = useState<string>("0.000");
     const [tvl, setTvl] = useState<string>("0.000");
@@ -140,16 +140,16 @@ export const useMorphoLend = () => {
             const signer = await getSigner();
             const userAddress = await signer.getAddress();
 
-            const ccopContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
+            const mxnbContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
             const vaultContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoMXNBVault, EXTENDED_VAULT_ABI, signer);
 
             // Parallel reads
             const [
-                ccopBal,
+                mxnbBal,
                 sharesBal,
                 totalAssetsVal
             ] = await Promise.all([
-                ccopContract.balanceOf(userAddress),
+                mxnbContract.balanceOf(userAddress),
                 vaultContract.balanceOf(userAddress),
                 vaultContract.totalAssets()
             ]);
@@ -160,10 +160,10 @@ export const useMorphoLend = () => {
                 assetsBal = await vaultContract.convertToAssets(sharesBal);
             }
 
-            setCcopBalance(formatBalance(ccopBal, CCOP_DECIMALS));
-            setVaultSharesBalance(formatBalance(sharesBal, CCOP_DECIMALS));
-            setVaultAssetsBalance(formatBalance(assetsBal, CCOP_DECIMALS));
-            setTvl(formatBalance(totalAssetsVal, CCOP_DECIMALS));
+            setCcopBalance(formatBalance(mxnbBal, MXNB_DECIMALS));
+            setVaultSharesBalance(formatBalance(sharesBal, MXNB_DECIMALS));
+            setVaultAssetsBalance(formatBalance(assetsBal, MXNB_DECIMALS));
+            setTvl(formatBalance(totalAssetsVal, MXNB_DECIMALS));
 
             // Fetch market data for APY
             await fetchMarketData();
@@ -225,7 +225,7 @@ export const useMorphoLend = () => {
         throw new Error("RPC timeout: The network is slow indexing your new balance. Please wait a moment and try again.");
     };
 
-    const executeDeposit = async (amountCCOP: string) => {
+    const executeDeposit = async (amountMXNB: string) => {
         setLoading(true);
         setError(null);
         setStep(1);
@@ -234,20 +234,20 @@ export const useMorphoLend = () => {
             const signer = await getSigner();
             const userAddress = await signer.getAddress();
 
-            const ccopContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
+            const mxnbContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
             const vaultContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoMXNBVault, EXTENDED_VAULT_ABI, signer);
 
-            const depositAmountBN = ethers.parseUnits(amountCCOP, CCOP_DECIMALS);
+            const depositAmountBN = ethers.parseUnits(amountMXNB, MXNB_DECIMALS);
 
             // Step 1: Approve
-            console.log("Step 1: Checking CCOP Allowance");
-            const currentAllowance = await ccopContract.allowance(userAddress, CONTRACT_ADDRESSES.morphoMXNBVault);
+            console.log("Step 1: Checking MXNB Allowance");
+            const currentAllowance = await mxnbContract.allowance(userAddress, CONTRACT_ADDRESSES.morphoMXNBVault);
 
             if (currentAllowance < depositAmountBN) {
-                const txApprove = await ccopContract.approve(CONTRACT_ADDRESSES.morphoMXNBVault, ethers.MaxUint256, { gasLimit: MANUAL_GAS_LIMIT });
+                const txApprove = await mxnbContract.approve(CONTRACT_ADDRESSES.morphoMXNBVault, ethers.MaxUint256, { gasLimit: MANUAL_GAS_LIMIT });
                 setTxHash(txApprove.hash);
                 await txApprove.wait();
-                await waitForAllowance(ccopContract, userAddress, CONTRACT_ADDRESSES.morphoMXNBVault, depositAmountBN);
+                await waitForAllowance(mxnbContract, userAddress, CONTRACT_ADDRESSES.morphoMXNBVault, depositAmountBN);
             }
 
             // Capture initial shares balance
@@ -255,7 +255,7 @@ export const useMorphoLend = () => {
 
             // Step 2: Deposit
             setStep(2);
-            console.log("Step 2: Depositing CCOP");
+            console.log("Step 2: Depositing MXNB");
             const txDeposit = await vaultContract.deposit(depositAmountBN, userAddress, { gasLimit: MANUAL_GAS_LIMIT });
             setTxHash(txDeposit.hash);
             await txDeposit.wait();
@@ -313,7 +313,7 @@ export const useMorphoLend = () => {
 
             // Preview redeem to get exact output amount
             const expectedAssets = await vaultContract.previewRedeem(sharesToRedeem);
-            setWithdrawnAmount(ethers.formatUnits(expectedAssets, CCOP_DECIMALS));
+            setWithdrawnAmount(ethers.formatUnits(expectedAssets, MXNB_DECIMALS));
 
             // Calculate yield if possible (simple heuristic for now: any excess over 1:1 if we knew deposit basis, 
             // but here we just show what we got. Or we can just leave yield as null/calculated later if we track deposits).
@@ -359,7 +359,7 @@ export const useMorphoLend = () => {
         step,
         error,
         txHash,
-        ccopBalance,
+        mxnbBalance,
         vaultSharesBalance,
         vaultAssetsBalance,
         tvl,
