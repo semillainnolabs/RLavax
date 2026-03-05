@@ -1,8 +1,13 @@
+**IMPORTANT**
+```
+Due to the complexity of our logic/architecture, RapiLoans requires intesive testing and contract auditing before deployment to Mainnet. The PoC was deployed in Base Sepolia because that is the Testnet where official Aave and Morpho smart contracts are present. However, a working limited PoC was also built running in Avalanche Fuji (see Fuji-borrow-working branch) with Aave and Morpho mock contracts deployed by our team.
+```
+
 # RapiLoans 💰
 
-**Instant MXNB loans. Zero interest. Powered by Base.**
+**Instant MXNB loans. Zero interest. Powered by Avalanche.**
 
-RapiLoans, by RapiMoni, enables users to access instant loans in MXNB (Bitso's Mexican Peso stablecoin) by collateralizing USDC, with **0% interest rates subsidized by the RapiLoans protocol**. Built on Base for speed, low costs, and accessibility to the Latin American market.
+RapiLoans, by RapiMoni, enables users to access instant loans in MXNB (Bitso's Mexican Peso stablecoin) by collateralizing USDC, with **0% interest rates subsidized by the RapiLoans protocol**. Built on Avalanche for speed, low costs, and accessibility to the Latin American market.
 
 ---
 
@@ -25,7 +30,7 @@ RapiLoans provides:
 - ✅ **0% interest rate** — Ingeniously subsidized by capturing Morpho USDC yield from collateral
 - ⚡ **Instant liquidity** — Borrow MXNB in minutes, not days
 - 🔒 **Overcollateralization model** — Supply USDC, borrow MXNB with predictable liquidation mechanics
-- 🌐 **Non-custodial** — Users maintain full control via smart contracts on Base
+- 🌐 **Non-custodial** — Users maintain full control via smart contracts on Avalanche
 - 📱 **Simple UX** — Intuitive web interface for wallet connection, collateral supply, and borrowing
 - 💎 **Sustainable model** — Lenders earn 6.5-9.5% APY; protocol revenue comes from yield spread, not user extraction
 
@@ -71,12 +76,12 @@ RapiLoans provides:
 | **KYC Required** | No | Yes | No |
 | **Local Currency** | MXNB | MXN + fees | Limited options |
 | **Non-Custodial** | Yes | No | Yes |
-| **Chain** | Base | N/A | Multiple / Expensive |
+| **Chain** | Avalanche | N/A | Multiple / Expensive |
 
 ### Go-to-Market Strategy
 
 **Phase 1 (Launch):**
-- Target crypto traders on Base with $1K–$100K USDC collateral
+- Target crypto traders on Avalanche with $1K–$100K USDC collateral
 - Partner with Bitso community for MXNB awareness
 - Airdrop incentives for early lenders/borrowers
 
@@ -116,7 +121,7 @@ RapiLoans provides:
 
 ### Technical Architecture
 
-**Built on Base with Morpho Blue:**
+**Built on Avalanche with Morpho Blue:**
 
 - **Morpho USDC Vault** → Supply USDC, earn yield
 - **WmUSDC (ERC-4626 Wrapper)** → Non-rebasing collateral asset
@@ -124,9 +129,9 @@ RapiLoans provides:
 - **Custom Oracle** → USDC/MXNB price feed for safety
 - **Frontend UI** → Simple, non-custodial interface
 
-**Why Base?**
+**Why Avalanche?**
 - ⚡ Low transaction costs (sub-cent)
-- 🚀 High throughput (40K+ TPS)
+- 🚀 High throughput 
 - 🌱 Thriving DeFi ecosystem
 - 🏦 Native support for multiple assets
 
@@ -135,7 +140,7 @@ RapiLoans provides:
 ## ✨ Key Features
 
 - ✅ **0% Interest Rate** — Subsidized by the protocol
-- ✅ **Instant Liquidity** — Borrow in minutes via Base's speed
+- ✅ **Instant Liquidity** — Borrow in minutes via Avalanche's speed
 - ✅ **Yield-Bearing Collateral** — Earn while you borrow
 - ✅ **Rewards & Incentives** — Community-auditable smart contracts
 - ✅ **Non-Custodial** — Full control via smart contracts
@@ -256,7 +261,7 @@ This model is a **game-changing Go-to-Market strategy**:
 - TailwindCSS for styling
 
 **Infrastructure:**
-- Base Mainnet (official deployment chain)
+- Avalanche Mainnet (official deployment chain)
 - The Graph for subgraph indexing
 - IPFS for decentralized storage
 
@@ -269,7 +274,7 @@ This model is a **game-changing Go-to-Market strategy**:
 - Node.js 18+
 - pnpm (recommended) or npm
 - MetaMask or compatible Web3 wallet
-- USDC and MXNB on Base Mainnet
+- USDC and MXNB on Base Sepolia
 
 ### Installation
 
@@ -295,7 +300,7 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Deployment to Base Mainnet
+### Deployment to Base Sepolia for testing
 
 You need to follow these steps:
 ```bash
@@ -378,17 +383,17 @@ Must remain > 1.0 to avoid liquidation
 
 ---
 
-## 🌐 Base Network Details
+## 🌐 Avalanche Network Details
 
-**Official RapiLoans Chain:** Base Mainnet
+**Official RapiLoans Chain:** Avalanche
 
-- **Chain ID:** 42161
-- **RPC:** https://mainnet.base.org
-- **Block Explorer:** https://www.basescan.org/
-- **Gas Token:** ETH (native)
+- **Chain ID:** 43113
+- **RPC:** https://api.avax-test.network/ext/bc/C/rpc
+- **Block Explorer:** ttps://subnets-test.avax.network/
+- **Gas Token:** AVAX (native)
 
-**Why Base?**
-- Ultra-low transaction fees (~$0.001)
+**Why Avalanche?**
+- Ultra-low transaction fees 
 - Fast finality (sub-second)
 - EVM-compatible (deploy Ethereum contracts unchanged)
 - Thriving DeFi ecosystem with deep liquidity
@@ -424,19 +429,19 @@ Must remain > 1.0 to avoid liquidation
 ## 🗺️ Roadmap
 
 **Q1 2026:**
-- ✅ Launch on Base Mainnet
+- ✅ Launch on Avalanche Mainnet
 - ✅ Core USDC/MXNB market live
 - Target: $1M initial TVL
 
 **Q2 2026:**
-- Governance token ($RAPI) introduction
+- Governance token ($MONI) introduction
 - Protocol revenue sharing with stakers
 - Remittance partnership pilots
 
 **Q3 2026:**
 - Expand to additional stablecoins (ARS, BRL, COP)
 - Mobile app release
-- Cross-chain bridging (Polygon, Avalanche, Base)
+- Cross-chain bridging (Arbitrum, Solana, Base)
 
 **Q4 2026 & Beyond:**
 - Merchant API for point-of-sale integration
@@ -455,14 +460,14 @@ Must remain > 1.0 to avoid liquidation
 ## 🙏 Acknowledgments
 
 Built with ❤️ by the SemillaLabs team.  
-Powered by **Base**, **Morpho Blue** and Bitso/Juno
+Powered by **Avalanche**, **Morpho Blue** and Bitso/Juno
 
 Special thanks to:
 - [Morpho Labs](https://morpho.org/) for the lending protocol
 - [Bitso](https://bitso.com/) for MXNB innovation
-- [Base](https://www.base.dev/) for ecosystem support
+- [Avalanche](https://www.avax.network/) for ecosystem support
 
 ---
 
-**Status:** 🚀 Ready for Base Mainnet  
-**Last Updated:** February 2026  
+**Status:** 🚀 Ready for Base Sepolia and Avalanche FUji  
+**Last Updated:** March 2026  
