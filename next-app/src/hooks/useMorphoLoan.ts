@@ -415,7 +415,8 @@ export const useMorphoLoan = () => {
                 await waitForAllowance(mxnb, userAddress, CONTRACT_ADDRESSES.morphoBlue, initialMxnbBalance);
             }
 
-            // 2a: Calculate MXNB APR
+            // 2a: Calculate MXNB APR for subsidy
+            
             const initialRawSubsidyUSDC = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
             console.log(`Calculating subsidy in MXNB (${borrowShares.toString()} shares) with INitial Subsidy: ${initialRawSubsidyUSDC} WmUSDC...`);
             const userInterestSubsidyInWaUSDC = await waUSDC.getInterestSubsidy(userAddress);
@@ -476,7 +477,7 @@ export const useMorphoLoan = () => {
             }
 
             setStep(16); // Complete Repay Flow and Display subsidy
-            const rawPaidSubsidyUSDC = await waUSDC.userPaidSubsidyInUSDC(userAddress);
+            /*const rawPaidSubsidyUSDC = await waUSDC.userPaidSubsidyInUSDC(userAddress);
             const paidSubsidyUSDC = ethers.formatUnits(rawPaidSubsidyUSDC, 6);
             console.log(`Paid Subsidy: ${paidSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB, ${estimatedSubsidyUSDC} USDC)`);
             if (parseFloat(paidSubsidyUSDC || "0") > 0) {
@@ -489,7 +490,7 @@ export const useMorphoLoan = () => {
                 setUserPaidSubsidyInUSDC(ethers.formatUnits(paidUSDC, 6));
                 setUserInterestInMxnb(estimatedSubsidyMXNB);
                 setUserInterestInUSDC(ethers.formatUnits(paidUSDC, 6));
-            }
+            }*/
 
             await refreshData();
             setLoading(false);
