@@ -27,6 +27,9 @@ export const CONTRACT_ADDRESSES = {
     wausdcMxnbOracle: "0xd098996B7A59de95357fF0EE3C2018eF0278Cf37",
     ethUsdcOracle: "0x97EBCdb0F784CDc9F91490bEBC9C8756491814a3",
     //fixedPriceOracle: "0xa8B8bBc0A572803A9153336122EBc971DeF60672",
+
+    // Others
+    mxnbFaucet: "0xcCAbA8fA0FAB8c0452945FfBce70c8040e651142",
 };
 
 export const MARKET_IDS = {
@@ -66,6 +69,11 @@ export const VAULT_ABI = [
     "function asset() external view returns (address)",
     "function convertToShares(uint256 assets) external view returns (uint256)",
     "function convertToAssets(uint256 shares) external view returns (uint256)",
+    "function getInterestSubsidy(address user) external returns (uint256)",
+    "function redeemWithInterestSubsidy(uint256 shares, address receiver, address owner) external returns (uint256)",
+    "function userInterestSubsidyInWaUSDC(address) view returns (uint256)",
+    "function userInterestInMxnb(address) view returns (uint256)",
+    "function userPaidSubsidyInUSDC(address) view returns (uint256)",
 ];
 
 export const WMEMORY_ABI = [

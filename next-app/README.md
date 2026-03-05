@@ -1,7 +1,5 @@
-**IMPORTANT**
-```
-Due to the complexity of our logic/architecture, RapiLoans requires intesive testing and contract auditing before deployment to Mainnet. The PoC was deployed in Base Sepolia because that is the Testnet where official Aave and Morpho smart contracts are present. However, a working limited PoC was also built running in Avalanche Fuji (see Fuji-borrow-working branch) with Aave and Morpho mock contracts deployed by our team.
-```
+> [!IMPORTANT]
+> Due to the complexity of our logic/architecture, RapiLoans requires intesive testing and contract auditing before deployment to Mainnet. The PoC was deployed in Base Sepolia because that is the Testnet where official Aave and Morpho smart contracts are present. However, a working limited PoC was also built running in Avalanche Fuji (see Fuji-borrow-working branch) with Aave and Morpho mock contracts deployed by our team.
 
 # RapiLoans 💰
 

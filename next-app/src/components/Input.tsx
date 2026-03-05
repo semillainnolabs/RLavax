@@ -9,7 +9,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export default function Input({
     label,
-    symbol = "CCOP",
+    symbol = "MXNB",
     onMaxClick,
     errorMessage,
     className = "",

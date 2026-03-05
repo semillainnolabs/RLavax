@@ -416,7 +416,7 @@ export const useMorphoLoan = () => {
             }
 
             // 2a: Calculate MXNB APR
-            const initialRawSubsidyUSDC = await waUSDC.userInterestSubsidyInWmUSDC(userAddress);
+            const initialRawSubsidyUSDC = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
             console.log(`Calculating subsidy in MXNB (${borrowShares.toString()} shares) with INitial Subsidy: ${initialRawSubsidyUSDC} WmUSDC...`);
             const userInterestSubsidyInWaUSDC = await waUSDC.getInterestSubsidy(userAddress);
             //await interestTx.wait();
