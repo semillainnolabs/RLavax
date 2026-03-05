@@ -77,12 +77,11 @@ export default function PrestamoRapido() {
                     {!authenticated ? (
                         <div className="text-center py-12">
                             <p className="text-gray-200 mb-6">Connect your wallet to get started</p>
-                            <button
+                            <Button
                                 onClick={login}
-                                className="w-full py-3 px-4 bg-[#264c73] hover:bg-[#4fe3c3] text-white hover:text-[#0a0a0a] font-semibold rounded-xl transition-all"
                             >
                                 Connect Wallet
-                            </button>
+                            </Button>
                         </div>
                     ) : (
                         <>
@@ -163,6 +162,7 @@ export default function PrestamoRapido() {
                                         value={borrowAmount}
                                         onChange={(e) => setBorrowAmount(e.target.value)}
                                         disabled={loading}
+                                        symbol="MXNB"
                                     />
 
                                     {/* Simulation Output */}
@@ -245,7 +245,7 @@ export default function PrestamoRapido() {
                                             <p className="text-gray-200">You received {borrowAmount} MXNB.</p>
                                         </div>
                                     )}
-
+                                    {/* isExceedingLiquidity debe ser retirado de disabled, para probar el flujo */}
                                     <Button
                                         onClick={handleBorrow}
                                         disabled={loading || !borrowAmount || parseFloat(borrowAmount) <= 0 || isInsufficientBalance || isExceedingLiquidity}

@@ -55,9 +55,8 @@ export const useMorphoLoan = () => {
 
     const fetchMarketAPR = useCallback(async () => {
         try {
-            if (!wallets.length) return;
-            const signer = await getSigner();
-            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, signer);
+            const readProvider = new ethers.JsonRpcProvider(AVAX_FUJI_CONFIG.rpcUrl);
+            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, readProvider);
 
             const marketDetails = await morpho.market(MARKET_IDS.mxnb);
             const totalSupplyAssets = Number(ethers.formatUnits(marketDetails.totalSupplyAssets, MXNB_DECIMALS));
@@ -66,7 +65,7 @@ export const useMorphoLoan = () => {
             setTotalSupplied(totalSupplyAssets);
             setTotalBorrowed(totalBorrowAssets);
 
-            const irmContract = new ethers.Contract(MXNB_MARKET_PARAMS.irm, IRM_ABI, signer);
+            const irmContract = new ethers.Contract(MXNB_MARKET_PARAMS.irm, IRM_ABI, readProvider);
             const marketTuple = [
                 marketDetails[0], marketDetails[1], marketDetails[2],
                 marketDetails[3], marketDetails[4], marketDetails[5],
@@ -91,7 +90,7 @@ export const useMorphoLoan = () => {
         } catch (err) {
             console.error("Error fetching market APR:", err);
         }
-    }, [wallets, getSigner]);
+    }, []);
 
     const refreshData = useCallback(async () => {
         try {
@@ -99,48 +98,43 @@ export const useMorphoLoan = () => {
             const signer = await getSigner();
             const userAddress = await signer.getAddress();
 
-            const usdcContract = new ethers.Contract(CONTRACT_ADDRESSES.usdc, ERC20_ABI, signer);
+            const readProvider = new ethers.JsonRpcProvider(AVAX_FUJI_CONFIG.rpcUrl);
+
+            const usdcContract = new ethers.Contract(CONTRACT_ADDRESSES.usdc, ERC20_ABI, readProvider);
             const bal = await usdcContract.balanceOf(userAddress);
             setUsdcBalance(formatBalance(bal, USDC_DECIMALS));
 
-            const mxnbContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
+            const mxnbContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, readProvider);
             const targetBalance = await mxnbContract.balanceOf(userAddress);
             setMxnbBalance(formatBalance(targetBalance, MXNB_DECIMALS));
 
-            const marketId = ethers.keccak256(
-                ethers.AbiCoder.defaultAbiCoder().encode(
-                    ["address", "address", "address", "address", "uint256"],
-                    [
-                        MXNB_MARKET_PARAMS.loanToken,
-                        MXNB_MARKET_PARAMS.collateralToken,
-                        MXNB_MARKET_PARAMS.oracle,
-                        MXNB_MARKET_PARAMS.irm,
-                        MXNB_MARKET_PARAMS.lltv
-                    ]
-                )
-            );
-            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, signer);
-            const position = await morpho.position(marketId, userAddress);
+            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, readProvider);
+            const position = await morpho.position(MARKET_IDS.mxnb, userAddress);
 
-            const marketData = await morpho.market(marketId);
+            const marketData = await morpho.market(MARKET_IDS.mxnb);
             const totalSupplyAssets = BigInt(marketData[0]);
             const totalBorrowAssets = BigInt(marketData[2]);
+            const totalBorrowShares = BigInt(marketData[3]);
             const liquidityAssets = totalSupplyAssets - totalBorrowAssets;
 
-            // Borrow shares -> debt (Simplification for UI)
-            setBorrowBalance(formatBalance(position[1], 12));
+            let borrowAssets = 0n;
+            if (totalBorrowShares > 0n) {
+                borrowAssets = (position[1] * totalBorrowAssets) / totalBorrowShares;
+            }
+
+            setBorrowBalance(formatBalance(borrowAssets, MXNB_DECIMALS));
             setCollateralBalance(formatBalance(position[2], 6)); // waUSDC is 6 decimals
 
             const safeLiquidity = liquidityAssets > 0n ? liquidityAssets : 0n;
             setMarketLiquidity(formatBalance(safeLiquidity, MXNB_DECIMALS));
 
-            const oracle = new ethers.Contract(MXNB_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], signer);
+            const oracle = new ethers.Contract(MXNB_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], readProvider);
             const price = await oracle.price();
             setOraclePrice(price);
 
             await fetchMarketAPR();
-        } catch (err) {
-            console.error("Error refreshing data:", err);
+        } catch (err: any) {
+            console.error("Error refreshing data:", err.message || err);
         }
     }, [wallets, getSigner, fetchMarketAPR]);
 
@@ -215,14 +209,13 @@ export const useMorphoLoan = () => {
         setStep(1);
 
         try {
-            const signer = await getSigner();
-            const userAddress = await signer.getAddress();
-
-            const provider = signer.provider;
-            const network = await provider?.getNetwork();
+            let signer = await getSigner();
+            const network = await signer.provider?.getNetwork();
             if (network?.chainId !== BigInt(AVAX_FUJI_CONFIG.chainId)) {
-                throw new Error("Wrong network detected during execution.");
+                await wallets[0].switchChain(AVAX_FUJI_CONFIG.chainId);
+                signer = await getSigner();
             }
+            const userAddress = await signer.getAddress();
 
             console.log(`Starting Zale: Borrow ${borrowAmountMXNB} MXNB`);
 
@@ -353,7 +346,12 @@ export const useMorphoLoan = () => {
         setStep(11);
 
         try {
-            const signer = await getSigner();
+            let signer = await getSigner();
+            const network = await signer.provider?.getNetwork();
+            if (network?.chainId !== BigInt(AVAX_FUJI_CONFIG.chainId)) {
+                await wallets[0].switchChain(AVAX_FUJI_CONFIG.chainId);
+                signer = await getSigner();
+            }
             const userAddress = await signer.getAddress();
 
             const mxnb = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
@@ -370,13 +368,7 @@ export const useMorphoLoan = () => {
                 MXNB_MARKET_PARAMS.lltv
             ];
 
-            const marketId = ethers.keccak256(
-                ethers.AbiCoder.defaultAbiCoder().encode(
-                    ["address", "address", "address", "address", "uint256"],
-                    MXNB_MARKET_PARAMS_ARRAY
-                )
-            );
-            const position = await morpho.position(marketId, userAddress);
+            const position = await morpho.position(MARKET_IDS.mxnb, userAddress);
             const borrowShares = position[1];
 
             if (borrowShares <= 0n) throw new Error("No debt to repay.");
@@ -405,7 +397,7 @@ export const useMorphoLoan = () => {
             // 3: Withdraw Collateral
             setStep(13);
             console.log("Step 3: Withdrawing Collateral");
-            const updatedPosition = await morpho.position(marketId, userAddress);
+            const updatedPosition = await morpho.position(MARKET_IDS.mxnb, userAddress);
             const collateralShares = updatedPosition[2];
 
             const initialWaUsdcBalance = await waUSDC.balanceOf(userAddress);

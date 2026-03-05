@@ -16,7 +16,7 @@ export default function Page() {
 
                 <RendimientoRapido />
 
-                <div className="text-xs text-gray-600 mt-8 max-w-md text-center">
+                <div className="text-xs text-gray-200 mt-8 max-w-md text-center">
                     <p>By depositing, you accept the protocol's terms and conditions.</p>
                     <p>ERC4626 Vault | Active auto-compounding</p>
                 </div>

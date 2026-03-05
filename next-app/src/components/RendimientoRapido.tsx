@@ -88,12 +88,11 @@ export default function RendimientoRapido() {
                     {!authenticated ? (
                         <div className="text-center py-12">
                             <p className="text-gray-200 mb-6">Connect your wallet to get started</p>
-                            <button
+                            <Button
                                 onClick={login}
-                                className="w-full cursor-pointer py-3 px-4 bg-[#264c73] hover:bg-[#4fe3c3] text-white hover:text-[#0a0a0a] font-semibold rounded-xl transition-all"
                             >
                                 Connect Wallet
-                            </button>
+                            </Button>
                         </div>
                     ) : (
                         <>
@@ -166,6 +165,7 @@ export default function RendimientoRapido() {
                                             onMaxClick={() => setDepositAmount(mxnbBalance)}
                                             errorMessage={isInsufficientBalance && "Insufficient balance"}
                                             disabled={loading}
+                                            symbol="MXNB"
                                         />
                                     )}
 
