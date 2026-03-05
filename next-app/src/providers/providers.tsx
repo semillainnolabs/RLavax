@@ -5,7 +5,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 // Replace this with any of the networks listed at https://github.com/wevm/viem/blob/main/src/chains/index.ts
-import { base, arbitrum, baseSepolia, arbitrumSepolia } from 'viem/chains';
+import { baseSepolia, avalancheFuji } from 'viem/chains';
 
 const solanaConnectors = toSolanaWalletConnectors();
 
@@ -21,7 +21,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     appearance: { walletChainType: "ethereum-only" },
     // externalWallets: { solana: { connectors: solanaConnectors } },
     defaultChain: baseSepolia,
-    supportedChains: [baseSepolia, arbitrumSepolia, base, arbitrum],
+    supportedChains: [baseSepolia, avalancheFuji],
     /* solana: {
       rpcs: {
         "solana:mainnet": {

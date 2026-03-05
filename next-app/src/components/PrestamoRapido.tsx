@@ -10,7 +10,7 @@ import Input from "./Input";
 
 export default function PrestamoRapido() {
     const { authenticated, login } = usePrivy();
-    const { loading, step, error, txHash, usdcBalance, ccopBalance, collateralBalance, borrowBalance, marketLiquidity, marketAPR, totalRepaidAmount, executeZale, executeRepayAndWithdraw, getSimulatedDeposit, resetState } = useMorphoLoan();
+    const { loading, step, error, txHash, usdcBalance, mxnbBalance, collateralBalance, borrowBalance, marketLiquidity, marketAPR, totalRepaidAmount, executeZale, executeRepayAndWithdraw, getSimulatedDeposit, resetState } = useMorphoLoan();
 
     const [borrowAmount, setBorrowAmount] = useState("");
     const [requiredDeposit, setRequiredDeposit] = useState("0.00");
@@ -36,12 +36,12 @@ export default function PrestamoRapido() {
         "Depositing in waUSDC",
         "Approving Collateral",
         "Depositing Collateral",
-        "Requesting CCOP"
+        "Requesting MXNB"
     ];
 
     const getRepayStepLabel = (s: number) => {
         switch (s) {
-            case 11: return "Verifying CCOP...";
+            case 11: return "Verifying MXNB...";
             case 12: return "Paying Debt...";
             case 13: return "Withdrawing Collateral...";
             case 14: return "Unwrapping waUSDC...";
@@ -67,7 +67,7 @@ export default function PrestamoRapido() {
                             <h2 className="text-2xl mb-2 border-b-4 border-[#264c73] font-bold text-white">
                                 Quick Loan
                             </h2>
-                            <p className="text-sm font-bold text-[#4fe3c3] mt-1">Get CCOP instantly</p>
+                            <p className="text-sm font-bold text-[#4fe3c3] mt-1">Get MXNB instantly</p>
                         </div>
                         <div className="p-3 rounded-full bg-[#0a0a0a] border border-[#264c73]">
                             <BanknotesIcon className="w-6 h-6 text-[#4fe3c3]" />
@@ -92,13 +92,13 @@ export default function PrestamoRapido() {
                                 rows={[
                                     [
                                         { label: "USDC", value: `${usdcBalance} USDC`, icon: CircleStackIcon, highlightValue: true },
-                                        { label: "CCOP", value: `${ccopBalance} CCOP`, icon: BanknotesIcon, highlightValue: true },
+                                        { label: "MXNB", value: `${mxnbBalance} MXNB`, icon: BanknotesIcon, highlightValue: true },
                                         { label: "Collateral", value: `${collateralBalance} waUSDC`, icon: LockClosedIcon }
                                     ],
                                     [
-                                        { label: "Current Debt", value: `${borrowBalance} CCOP`, icon: CreditCardIcon },
+                                        { label: "Current Debt", value: `${borrowBalance} MXNB`, icon: CreditCardIcon },
                                         { label: "Rate (APR)", value: `${marketAPR}%`, icon: ChartBarIcon },
-                                        { label: "Liquidity", value: `${marketLiquidity} CCOP`, icon: CircleStackIcon }
+                                        { label: "Liquidity", value: `${marketLiquidity} MXNB`, icon: CircleStackIcon }
                                     ]
                                 ]}
                             />
@@ -111,7 +111,7 @@ export default function PrestamoRapido() {
                                     <div>
                                         <h3 className="text-2xl font-bold text-white mb-2">Operation Successful!</h3>
                                         <p className="text-gray-200">
-                                            You received <span className="text-[#4fe3c3] font-bold text-lg">{borrowAmount} CCOP</span>
+                                            You received <span className="text-[#4fe3c3] font-bold text-lg">{borrowAmount} MXNB</span>
                                         </p>
                                     </div>
 
@@ -135,7 +135,7 @@ export default function PrestamoRapido() {
                                         <div className="text-sm bg-[#0a0a0a] border border-[#264c73] p-4 rounded-lg space-y-2 text-left">
                                             <div className="flex justify-between">
                                                 <span className="text-gray-200">Total Paid:</span>
-                                                <span className="text-white font-mono">{totalRepaidAmount || "Calculating..."} CCOP</span>
+                                                <span className="text-white font-mono">{totalRepaidAmount || "Calculating..."} MXNB</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-gray-200">Status:</span>
@@ -159,7 +159,7 @@ export default function PrestamoRapido() {
                                 <div className="space-y-6 py-6">
                                     {/* Input */}
                                     <Input
-                                        label="How much CCOP do you want to receive?"
+                                        label="How much MXNB do you want to receive?"
                                         value={borrowAmount}
                                         onChange={(e) => setBorrowAmount(e.target.value)}
                                         disabled={loading}
@@ -242,7 +242,7 @@ export default function PrestamoRapido() {
                                         <div className="p-4 rounded-xl bg-[#0a0a0a] border border-[#264c73] text-[#4fe3c3] text-sm text-center">
                                             <CheckCircleIcon className="w-8 h-8 mx-auto mb-2 text-[#4fe3c3]" />
                                             <p className="font-bold text-lg">Loan Successful!</p>
-                                            <p className="text-gray-200">You received {borrowAmount} CCOP.</p>
+                                            <p className="text-gray-200">You received {borrowAmount} MXNB.</p>
                                         </div>
                                     )}
 
