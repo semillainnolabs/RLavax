@@ -10,7 +10,7 @@ import Input from "./Input";
 
 export default function PrestamoRapido() {
     const { authenticated, login } = usePrivy();
-    const { loading, step, error, txHash, usdcBalance, mxnbBalance, collateralBalance, borrowBalance, marketLiquidity, marketAPR, totalRepaidAmount, executeZale, executeRepayAndWithdraw, getSimulatedDeposit, resetState } = useMorphoLoan();
+    const { loading, step, error, txHash, usdcBalance, mxnbBalance, collateralBalance, borrowBalance, marketLiquidity, marketAPR, totalRepaidAmount, userPaidSubsidyInUSDC, userInterestInMxnb, userInterestInUSDC, executeZale, executeRepayAndWithdraw, getSimulatedDeposit, resetState } = useMorphoLoan();
 
     const [borrowAmount, setBorrowAmount] = useState("");
     const [requiredDeposit, setRequiredDeposit] = useState("0.00");
@@ -141,6 +141,21 @@ export default function PrestamoRapido() {
                                                 <span className="text-gray-200">Status:</span>
                                                 <span className="text-[#4fe3c3]">Debt Settled</span>
                                             </div>
+                                            {parseFloat(userPaidSubsidyInUSDC || "0") > 0 && (
+                                                <>
+                                                    <div className="h-px bg-[#264c73] my-2" />
+                                                    <div className="text-center">
+                                                        <div className="text-xs text-[#4fe3c3] font-semibold mb-2 flex items-center justify-center gap-1">
+                                                            💰 We've subsidized your loan interest!!!
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-200">We gave you:</span>
+                                                        <span className="text-white font-mono">{userInterestInMxnb} MXNB (~= {userInterestInUSDC})</span>
+                                                        <span className="text-xs text-gray-200 font-mono">(Approx. {userInterestInUSDC} USDC)</span>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 

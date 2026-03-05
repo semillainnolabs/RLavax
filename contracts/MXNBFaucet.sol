@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * @title MXNBFaucet
  * @notice Faucet for MockMXNB token. Allows users to swap ETH for MXNB at a fixed rate.
- * @dev Fixed exchange rate: 1 ETH = 33548.87 MXNB (accounting for 18 decimal ETH and 6 decimal MXNB)
+ * @dev Fixed exchange rate: 1 ETH = 37524 MXNB (accounting for 18 decimal ETH and 6 decimal MXNB)
  */
 contract MXNBFaucet is Ownable {
     // ============================================================================
@@ -17,8 +17,8 @@ contract MXNBFaucet is Ownable {
     IERC20 public mxnbToken;
 
     /// @notice Fixed exchange rate: 1 ETH (10^18 wei) = 33548.87 MXNB (33548870000 wei in 6 decimals)
-    /// This represents: 33548.87 * 10^6 = 33548870000
-    uint256 public constant EXCHANGE_RATE = 33548870000; // MXNB per 1 ETH (accounting for 6 decimals)
+    /// This represents: 37524 * 10^6 = 37524000000
+    uint256 public constant EXCHANGE_RATE = 37524000000; // MXNB per 1 ETH (accounting for 6 decimals)
 
     /// @notice Maximum amount of MXNB a single wallet can receive: 20000 MXNB (in wei, 6 decimals)
     uint256 public constant MAX_PER_WALLET = 20000 * 10**6; // 20000 MXNB
