@@ -226,6 +226,8 @@ export const useMorphoLoan = () => {
             await new Promise(resolve => setTimeout(resolve, 2500)); // Wait 2.5s
             retries++;
         }
+        console.log("RPC timeout: The network is slow indexing your new subsidy. Please wait a moment and try again.");
+        return await tokenContract.userInterestSubsidyInWaUSDC(userAddress);
         throw new Error("RPC timeout: The network is slow indexing your new subsidy. Please wait a moment and try again.");
     };
 
@@ -416,19 +418,22 @@ export const useMorphoLoan = () => {
             }
 
             // 2a: Calculate MXNB APR for subsidy
-            
+
             const initialRawSubsidyUSDC = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
-            console.log(`Calculating subsidy in MXNB (${borrowShares.toString()} shares) with INitial Subsidy: ${initialRawSubsidyUSDC} WmUSDC...`);
+            const initialRawSubsidyMXNB = 0;//await waUSDC.userInterestInMxnb(userAddress);
+            console.log(`Calculating subsidy in MXNB (${borrowShares.toString()} shares) with INitial Subsidy: ${initialRawSubsidyUSDC} WmUSDC, ${initialRawSubsidyMXNB} MXNB...`);
             const userInterestSubsidyInWaUSDC = await waUSDC.getInterestSubsidy(userAddress);
             //await interestTx.wait();
             console.log('✓ Interest confirmed:', userInterestSubsidyInWaUSDC);
-            await waitForSubsidyIncrease(waUSDC, userAddress, initialRawSubsidyUSDC);
-            const rawEstimatedSubsidyUSDC = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
-            const estimatedSubsidyUSDC = ethers.formatUnits(rawEstimatedSubsidyUSDC, 18);
-            const rawEstimatedSubsidyMXNB = await waUSDC.userInterestInMxnb(userAddress);
-            const estimatedSubsidyMXNB = ethers.formatUnits(rawEstimatedSubsidyMXNB, 6);
-            console.log(`User raw Subsidy: ${rawEstimatedSubsidyUSDC} USDC (${rawEstimatedSubsidyMXNB} MXNB)`);
-            console.log(`User Subsidy: ${estimatedSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB)`);
+            if (await waitForSubsidyIncrease(waUSDC, userAddress, initialRawSubsidyUSDC)) {
+                const rawEstimatedSubsidyUSDC = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
+                const rawEstimatedSubsidyMXNB = 0;//await waUSDC.userInterestInMxnb(userAddress);
+                const estimatedSubsidyUSDC = ethers.formatUnits(rawEstimatedSubsidyUSDC, 6);
+                const estimatedSubsidyMXNB = ethers.formatUnits(rawEstimatedSubsidyMXNB, 6);
+                console.log(`User raw Subsidy: ${rawEstimatedSubsidyUSDC} USDC (${rawEstimatedSubsidyMXNB} MXNB)`);
+                console.log(`User Subsidy: ${estimatedSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB)`);
+            }
+
 
             // 2b: Repay Debt
             setStep(12);
@@ -460,7 +465,8 @@ export const useMorphoLoan = () => {
             const initialAUsdcBalance = await aUSDC.balanceOf(userAddress);
 
             if (wMusdcBalance > 0n) {
-                const tx4 = await waUSDC.redeem(wMusdcBalance, userAddress, userAddress, { gasLimit: MANUAL_GAS_LIMIT });
+                //const tx4 = await waUSDC.redeem(wMusdcBalance, userAddress, userAddress, { gasLimit: MANUAL_GAS_LIMIT });
+                const tx4 = await waUSDC.redeemWithInterestSubsidy(wMusdcBalance, userAddress, userAddress, { gasLimit: MANUAL_GAS_LIMIT });
                 setTxHash(tx4.hash);
                 await tx4.wait();
                 await waitForBalanceIncrease(aUSDC, userAddress, initialAUsdcBalance);
