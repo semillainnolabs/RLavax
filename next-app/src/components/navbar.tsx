@@ -19,6 +19,7 @@ export default function Header() {
     const loggedInLinks = [
         { href: '/borrow', key: 'Borrow' },
         { href: '/lend', key: 'Lend' },
+        { href: '/manage', key: 'Manage' },
     ];
 
     // Función mejorada: Copiar address al click

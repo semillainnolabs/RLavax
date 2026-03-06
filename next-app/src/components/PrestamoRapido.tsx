@@ -75,14 +75,13 @@ export default function PrestamoRapido() {
                     </div>
 
                     {!authenticated ? (
-                        <div className="text-center py-12">
+                        <div className="text-center pt-12">
                             <p className="text-gray-200 mb-6">Connect your wallet to get started</p>
-                            <button
+                            <Button
                                 onClick={login}
-                                className="w-full py-3 px-4 bg-[#264c73] hover:bg-[#4fe3c3] text-white hover:text-[#0a0a0a] font-semibold rounded-xl transition-all"
                             >
                                 Connect Wallet
-                            </button>
+                            </Button>
                         </div>
                     ) : (
                         <>
@@ -278,7 +277,7 @@ export default function PrestamoRapido() {
                                     </Button>
 
                                     {/* Repay Button - Only show if user has debt or collateral */}
-                                    {(!loading && (parseFloat(borrowBalance) > 0 || parseFloat(collateralBalance) > 0)) && (
+                                    {(!loading && (parseFloat(borrowBalance) > 0)) && (
                                         <Button
                                             onClick={executeRepayAndWithdraw}
                                             isWithdraw

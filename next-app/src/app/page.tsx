@@ -5,6 +5,7 @@ import { ToastContainer } from "react-toastify";
 
 import { FullScreenLoader } from "@/components/ui/fullscreen-loader";
 import Link from "next/link";
+import Button from "@/components/Button";
 function Home() {
   const { ready, authenticated, login } = usePrivy();
   if (!ready) {
@@ -69,17 +70,16 @@ function Home() {
       ) : (
         <section className="flex flex-col py-20 h-screen items-center gap-10">
           <div className="text-center">
-            <h2 className="text-4xl font-extrabold text-gray-400 tracking-tight">Welcome to RapiLoans by RapiMoni</h2>
+            <h2 className="text-4xl font-extrabold text-gray-200">Welcome to RapiLoans by RapiMoni</h2>
             <p className="mt-4 text-lg text-gray-200 max-w-2xl mx-auto">
               A decentralized platform to manage your capital swiftly and securely.
             </p>
           </div>
-          <button
-            className="bg-gray-100 text-gray-900 cursor-pointer mt-15 w-full max-w-md rounded-full px-4 py-2 font-bold hover:bg-gray-300 transition-colors duration-200 lg:px-8 lg:py-4 lg:text-xl"
+          <Button
             onClick={login}
           >
             Connect Wallet or Create Account
-          </button>
+          </Button>
         </section>
       )}
 

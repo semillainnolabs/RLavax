@@ -354,12 +354,18 @@ export const useMorphoLoan = () => {
             setLoading(false);
 
         } catch (err: any) {
-            console.error("Zale Error:", err);
-            let msg = err.reason || err.message || "Transaction failed";
+            let msg = err.reason
+            console.log({
+                reason: err.reason,
+                message: err.message
+            });
+
             if (msg.includes("rejected")) msg = "You rejected the transaction";
             if (msg.includes("estimateGas")) msg = "Gas error.";
             if (msg.includes("allowance")) msg = "Approval failed.";
             if (msg.includes("collateral")) msg = "Insufficient collateral.";
+            if (msg.includes("transaction execution reverted")) msg = "The transaction was reverted, due to insufficient collateral. Please try again.";
+            else msg = "Transaction failed. Please try again.";
             setError(msg);
         } finally {
             if (step !== 8 && step < 9) {
@@ -367,7 +373,7 @@ export const useMorphoLoan = () => {
             }
         }
     };
-
+    // Pay all and withdraw
     const executeRepayAndWithdraw = async () => {
         setLoading(true);
         setError(null);
@@ -422,7 +428,15 @@ export const useMorphoLoan = () => {
             const initialRawSubsidyUSDC = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
             const initialRawSubsidyMXNB = 0;//await waUSDC.userInterestInMxnb(userAddress);
             console.log(`Calculating subsidy in MXNB (${borrowShares.toString()} shares) with INitial Subsidy: ${initialRawSubsidyUSDC} WmUSDC, ${initialRawSubsidyMXNB} MXNB...`);
-            const userInterestSubsidyInWaUSDC = await waUSDC.getInterestSubsidy(userAddress);
+
+            // try catch for getInterestSubsidy
+            let userInterestSubsidyInWaUSDC;
+            try {
+                userInterestSubsidyInWaUSDC = await waUSDC.getInterestSubsidy(userAddress);
+            } catch (error) {
+                setError("Failed to fetch interest subsidy.");
+                console.log(error);
+            }
             //await interestTx.wait();
             console.log('✓ Interest confirmed:', userInterestSubsidyInWaUSDC);
             if (await waitForSubsidyIncrease(waUSDC, userAddress, initialRawSubsidyUSDC)) {
@@ -503,8 +517,17 @@ export const useMorphoLoan = () => {
 
         } catch (err: any) {
             console.error("Repay Error:", err);
-            let msg = err.reason || err.message || "Repay transaction failed";
+            let msg = err.message;
+            console.log({
+                reason: err.reason,
+                message: err.message
+            });
             if (msg.includes("rejected")) msg = "You rejected the transaction";
+            if (msg.includes("estimateGas")) msg = "Gas error.";
+            if (msg.includes("allowance")) msg = "Approval failed.";
+            if (msg.includes("collateral")) msg = "Insufficient collateral.";
+            if (msg.includes("transaction execution reverted")) msg = "The transaction was reverted, due to insufficient collateral. Please try again.";
+            else msg = "Transaction failed. Please try again.";
             setError(msg);
         } finally {
             if (step !== 16 && step >= 11) {

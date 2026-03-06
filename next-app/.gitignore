@@ -42,5 +42,5 @@ yarn-error.log*
 next-env.d.ts
 
 # referencias
-/ref
+src/ref
 
