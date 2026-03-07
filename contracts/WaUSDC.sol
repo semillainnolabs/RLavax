@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 interface IDebtLens {
     function getAccruedInterest(bytes32 marketId, address user) external view returns (uint256);
@@ -20,10 +21,16 @@ interface IWaUSDCMXNBOracle {
  * - getInterestSubsidy: idempotent/resizing reservation using 1e36 oracle scaling
  * - redeemWithInterestSubsidy: burns shares, reduces principal pro rata, returns principal + subsidy
  *   (vault keeps any remaining yield)
+ * - Uses virtual assets/shares to prevent share inflation attacks and ensure
+ *   deposits convert 1:1 with assets on initial deposit
  */
 contract WaUSDC is ERC4626, Ownable {
     IERC20 public immutable aToken;
     uint8 private constant _decimals = 6;
+    
+    // Virtual assets/shares to prevent inflation and ensure initial deposit parity
+    uint256 private constant VIRTUAL_ASSETS = 1;
+    uint256 private constant VIRTUAL_SHARES = 1;
 
     uint256 public totalPrincipal;
     mapping(address => uint256) public userPrincipal;
@@ -60,6 +67,29 @@ contract WaUSDC is ERC4626, Ownable {
 
     function totalAssets() public view override returns (uint256) {
         return aToken.balanceOf(address(this));
+    }
+    
+    /**
+     * Override the conversion functions to use virtual assets/shares.
+     * This ensures:
+     * - Initial deposits get 1:1 share conversion (prevents share inflation)
+     * - Accumulated yield is accounted for fairly across all share holders
+     * - Formula: shares = assets × (totalSupply + virtualShares) / (totalAssets + virtualAssets)
+     */
+    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
+        uint256 supply = totalSupply();
+        uint256 assets_ = totalAssets();
+        return (assets == 0 || supply == 0) 
+            ? assets 
+            : assets.mulDiv(supply + VIRTUAL_SHARES, assets_ + VIRTUAL_ASSETS, rounding);
+    }
+
+    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
+        uint256 supply = totalSupply();
+        uint256 assets_ = totalAssets();
+        return (shares == 0 || supply == 0) 
+            ? shares 
+            : shares.mulDiv(assets_ + VIRTUAL_ASSETS, supply + VIRTUAL_SHARES, rounding);
     }
 
     // --- deposit / mint track principal --- //
@@ -159,7 +189,8 @@ contract WaUSDC is ERC4626, Ownable {
      * getInterestSubsidy:
      * - interestInMXNB (6 decimals) from DebtLens
      * - oraclePrice = MXNB per WaUSDC scaled by 1e36
-     * - desired = interestInMXNB * 1e36 / oraclePrice  => WaUSDC units (6 decimals)
+     * - Calculate subsidy in waUSDC equivalent: waUSDC = interestInMXNB * 1e36 / oraclePrice
+     * - Convert to aUSDC units using vault's current conversion rate
      * - Adjust stored reservation to desired (delta logic) so repeated calls are safe
      */
     function getInterestSubsidy(address user) external returns (uint256 newReserved) {
@@ -182,7 +213,12 @@ contract WaUSDC is ERC4626, Ownable {
         uint256 oraclePrice = IWaUSDCMXNBOracle(mxnbUsdcOracle).price();
         require(oraclePrice > 0, "oracle price 0");
 
-        uint256 desired = (interestInMXNB * 1e36) / oraclePrice; // uses 1e36 scaling
+        // Calculate subsidy in waUSDC-equivalent units
+        uint256 subsidyInWaUSDC = (interestInMXNB * 1e36) / oraclePrice;
+        
+        // Convert to aUSDC (aToken) units using vault's current conversion rate
+        // This ensures subsidy amount is in the same units (aUSDC) that get transferred
+        uint256 desired = _convertToAssets(subsidyInWaUSDC, Math.Rounding.Floor);
 
         uint256 current = userInterestSubsidyInWaUSDC[user];
 

@@ -426,26 +426,32 @@ export const useMorphoLoan = () => {
             // 2a: Calculate MXNB APR for subsidy
             const initialRawSubsidyUSDC = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
             const initialRawSubsidyMXNB = await waUSDC.userInterestInMxnb(userAddress);
-            console.log(`Calculating subsidy in MXNB (${borrowShares.toString()} shares) with INitial Subsidy: ${initialRawSubsidyUSDC} WmUSDC, ${initialRawSubsidyMXNB} MXNB...`);
+            console.log(`Calculating subsidy in MXNB (${borrowShares.toString()} shares) with Initial Subsidy: ${initialRawSubsidyUSDC} WaUSDC, ${initialRawSubsidyMXNB} MXNB...`);
 
-            // try catch for getInterestSubsidy
-            let userInterestSubsidyInWaUSDC;
+            // Call getInterestSubsidy() as a state-modifying transaction
+            setStep(11.5);
+            console.log("Step 2a: Computing interest subsidy...");
+            let newReservedSubsidy = 0n;
             try {
-                userInterestSubsidyInWaUSDC = await waUSDC.getInterestSubsidy(userAddress);
-            } catch (error) {
-                setError("Failed to fetch interest subsidy.");
-                console.log(error);
+                const tx = await waUSDC.getInterestSubsidy(userAddress, { gasLimit: MANUAL_GAS_LIMIT });
+                setTxHash(tx.hash);
+                const receipt = await tx.wait();
+                console.log(`✓ getInterestSubsidy transaction confirmed at block ${receipt?.blockNumber}`);
+
+                // Get the updated subsidy value from contract after transaction is mined
+                newReservedSubsidy = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
+                console.log(`✓ New reserved subsidy: ${newReservedSubsidy.toString()} aUSDC`);
+            } catch (error: any) {
+                setError("Failed to calculate interest subsidy.");
+                console.error("getInterestSubsidy error:", error);
+                throw error;
             }
-            //await interestTx.wait();
-            console.log('✓ Interest confirmed:', userInterestSubsidyInWaUSDC);
-            if (await waitForSubsidyIncrease(waUSDC, userAddress, initialRawSubsidyUSDC)) {
-                const rawEstimatedSubsidyUSDC = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
-                const rawEstimatedSubsidyMXNB = 0;//await waUSDC.userInterestInMxnb(userAddress);
-                const estimatedSubsidyUSDC = ethers.formatUnits(rawEstimatedSubsidyUSDC, 6);
-                const estimatedSubsidyMXNB = ethers.formatUnits(rawEstimatedSubsidyMXNB, 6);
-                console.log(`User raw Subsidy: ${rawEstimatedSubsidyUSDC} USDC (${rawEstimatedSubsidyMXNB} MXNB)`);
-                console.log(`User Subsidy: ${estimatedSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB)`);
-            }
+
+            const rawEstimatedSubsidyUSDC = newReservedSubsidy;
+            const rawEstimatedSubsidyMXNB = await waUSDC.userInterestInMxnb(userAddress);
+            const estimatedSubsidyUSDC = ethers.formatUnits(rawEstimatedSubsidyUSDC, 6);
+            const estimatedSubsidyMXNB = ethers.formatUnits(rawEstimatedSubsidyMXNB, 6);
+            console.log(`User Subsidy: ${estimatedSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB)`);
 
             // 2b: Repay Debt
             setStep(12);
@@ -495,7 +501,7 @@ export const useMorphoLoan = () => {
             }
 
             setStep(16); // Complete Repay Flow and Display subsidy
-            /*const rawPaidSubsidyUSDC = await waUSDC.userPaidSubsidyInUSDC(userAddress);
+            const rawPaidSubsidyUSDC = await waUSDC.userPaidSubsidyInUSDC(userAddress);
             const paidSubsidyUSDC = ethers.formatUnits(rawPaidSubsidyUSDC, 6);
             console.log(`Paid Subsidy: ${paidSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB, ${estimatedSubsidyUSDC} USDC)`);
             if (parseFloat(paidSubsidyUSDC || "0") > 0) {
@@ -508,7 +514,7 @@ export const useMorphoLoan = () => {
                 setUserPaidSubsidyInUSDC(ethers.formatUnits(paidUSDC, 6));
                 setUserInterestInMxnb(estimatedSubsidyMXNB);
                 setUserInterestInUSDC(ethers.formatUnits(paidUSDC, 6));
-            }*/
+            }
 
             await refreshData();
             setLoading(false);
