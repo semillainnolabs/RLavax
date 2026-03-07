@@ -515,13 +515,13 @@ export const useMorphoLoan = () => {
                 setUserPaidSubsidyInUSDC(paidSubsidyUSDC);
                 setUserInterestInMxnb(estimatedSubsidyMXNB);
                 setUserInterestInUSDC(estimatedSubsidyUSDC);
-            } else {
+            } /*else {
                 const subsidyMXNE = parseFloat(estimatedSubsidyMXNB || "0");
                 let paidUSDC = subsidyMXNE / 17.6;
                 setUserPaidSubsidyInUSDC(paidUSDC.toFixed(7));
                 setUserInterestInMxnb(estimatedSubsidyMXNB);
                 setUserInterestInUSDC(paidUSDC.toFixed(7));
-            }
+            }*/
 
             await refreshData();
             setLoading(false);
