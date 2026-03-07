@@ -87,11 +87,11 @@ export default function RendimientoRapido() {
 
                     {!authenticated ? (
                         <div className="text-center pt-12">
-                            <p className="text-gray-200 mb-6">Connect your wallet to get started</p>
+                            <p className="text-gray-200 mb-6">Sign In/Up to get started</p>
                             <Button
                                 onClick={login}
                             >
-                                Connect Wallet
+                                Sign In/Up
                             </Button>
                         </div>
                     ) : (

@@ -78,7 +78,7 @@ function Home() {
           <Button
             onClick={login}
           >
-            Connect Wallet or Create Account
+            Sign In/Up to Start
           </Button>
         </section>
       )}

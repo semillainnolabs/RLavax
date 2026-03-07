@@ -1,5 +1,8 @@
 > [!IMPORTANT]
-> Due to the complexity of our logic/architecture, RapiLoans requires intensive testing and contract auditing before deployment to Mainnet. The PoC was deployed in Base Sepolia because that is the Testnet where official Aave and Morpho smart contracts are present. However, a working limited PoC was also built running in Avalanche Fuji (see Fuji-borrow-working branch) with Aave and Morpho mock contracts deployed by our team.
+> Due to the complexity of our logic/architecture, RapiLoans requires intensive testing and contract auditing before deployment to Mainnet. The PoC was deployed in Base Sepolia because that is the Testnet where official Aave and Morpho smart contracts are present. However, a working limited PoC was also built for running in Avalanche Fuji, see "fuji-borrow-working" branch [here](https://github.com/semillainnolabs/RLavax/tree/fuji-borrow-working), with Aave and Morpho mock contracts deployed by our team.
+> For testing the Borrow and Lend features in Base Sepolia, you will need Sepolia ETH, USDC (Aave's version of USDC) and mockMXNB(our version of MXNB). For getting the tokens you need to:
+> 1. We've created a smart contract faucet for mockMXNB tokens, deployed to Base Sepolia. You only need to send Sepolia ETH from your wallet to the SC's address(`0xcCAbA8fA0FAB8c0452945FfBce70c8040e651142`) in Base Sepolia and the SC will automatically transfer back the corresponding amount of mockMXNB tokens(the FX rate is 1 ETH to 33548.87 mockMXNB). The Faucet smart contract is located at `/contracts/MXNBFacucet.sol`. For checking the real time liquidity of the faucet in Sepolia Basescan [click here](https://sepolia.basescan.org/address/0xcCAbA8fA0FAB8c0452945FfBce70c8040e651142), which is nearly 100M mockMXNB.
+> 2. For simplicity we decided to use Aave's USDC which already have a faucet available in Base Sepolia. To get the USDC [click here](https://app.aave.com/faucet/), please remember to enable the Testnet mode in Aave first.
 
 # RapiLoans 💰
 
@@ -483,5 +486,5 @@ Special thanks to:
 
 ---
 
-**Status:** 🚀 Ready for Base Sepolia and Avalanche Fuji  
+**Status:** 🚀 Ready for Base Sepolia and Avalanche FUji  
 **Last Updated:** March 2026  
