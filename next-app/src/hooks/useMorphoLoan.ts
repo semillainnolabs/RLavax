@@ -45,7 +45,7 @@ export const useMorphoLoan = () => {
         const formatted = ethers.formatUnits(val, decimals);
         const [integer, fraction] = formatted.split(".");
         if (!fraction) return integer;
-        return `${integer}.${fraction.substring(0, 3)}`;
+        return `${integer}.${fraction.substring(0, 1)}`;
     };
 
     const getSigner = useCallback(async () => {
@@ -442,15 +442,21 @@ export const useMorphoLoan = () => {
                 newReservedSubsidy = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
                 console.log(`✓ New reserved subsidy: ${newReservedSubsidy.toString()} aUSDC`);
             } catch (error: any) {
-                setError("Failed to calculate interest subsidy.");
-                console.error("getInterestSubsidy error:", error);
-                throw error;
+                //setError("Failed to calculate interest subsidy.");
+                console.warn("getInterestSubsidy error (proceeding with current subsidy):", error);
+                // If the transaction fails (e.g. insufficient yield), we fetch the current subsidy anyway
+                try {
+                    newReservedSubsidy = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
+                } catch (e) {
+                    console.error("Failed to fetch fallback subsidy:", e);
+                }
             }
 
             const rawEstimatedSubsidyUSDC = newReservedSubsidy;
-            const rawEstimatedSubsidyMXNB = await waUSDC.userInterestInMxnb(userAddress);
+            const rawEstimatedSubsidyMXNB = await waUSDC.userInterestInMXNB(userAddress);
             const estimatedSubsidyUSDC = ethers.formatUnits(rawEstimatedSubsidyUSDC, 6);
             const estimatedSubsidyMXNB = ethers.formatUnits(rawEstimatedSubsidyMXNB, 6);
+            console.log(`User Raw Subsidy: ${rawEstimatedSubsidyUSDC} USDC (${rawEstimatedSubsidyMXNB} MXNB)`);
             console.log(`User Subsidy: ${estimatedSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB)`);
 
             // 2b: Repay Debt
@@ -503,6 +509,7 @@ export const useMorphoLoan = () => {
             setStep(16); // Complete Repay Flow and Display subsidy
             const rawPaidSubsidyUSDC = await waUSDC.userPaidSubsidyInUSDC(userAddress);
             const paidSubsidyUSDC = ethers.formatUnits(rawPaidSubsidyUSDC, 6);
+            console.log(`Paid raw Subsidy: ${rawPaidSubsidyUSDC} USDC (${rawEstimatedSubsidyMXNB} MXNB, ${rawEstimatedSubsidyUSDC} USDC)`);
             console.log(`Paid Subsidy: ${paidSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB, ${estimatedSubsidyUSDC} USDC)`);
             if (parseFloat(paidSubsidyUSDC || "0") > 0) {
                 setUserPaidSubsidyInUSDC(paidSubsidyUSDC);
@@ -511,9 +518,9 @@ export const useMorphoLoan = () => {
             } else {
                 const subsidyMXNE = parseFloat(estimatedSubsidyMXNB || "0");
                 let paidUSDC = subsidyMXNE / 17.6;
-                setUserPaidSubsidyInUSDC(ethers.formatUnits(paidUSDC, 6));
+                setUserPaidSubsidyInUSDC(paidUSDC.toFixed(7));
                 setUserInterestInMxnb(estimatedSubsidyMXNB);
-                setUserInterestInUSDC(ethers.formatUnits(paidUSDC, 6));
+                setUserInterestInUSDC(paidUSDC.toFixed(7));
             }
 
             await refreshData();

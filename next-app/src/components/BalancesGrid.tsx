@@ -9,7 +9,7 @@ export type BalanceItem = {
 
 interface BalancesGridProps {
     rows: BalanceItem[][];
-    columns?: 2 | 3;
+    columns?: 1  | 2 | 3;
     className?: string;
 }
 
@@ -33,7 +33,7 @@ export default function BalancesGrid({ rows, columns = 2, className = "" }: Bala
                                 <div className="text-[10px] uppercase text-white font-bold mb-1 flex items-center justify-center gap-1">
                                     <Icon className="w-3 h-3 text-[#4fe3c3]" /> {item.label}
                                 </div>
-                                <div className={`font-mono text-xs truncate ${item.highlightValue ? "text-white" : "text-gray-200"}`}>
+                                <div className={`font-mono text-sm truncate ${item.highlightValue ? "text-white" : "text-gray-200"}`}>
                                     {item.value}
                                 </div>
                             </div>

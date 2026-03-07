@@ -98,19 +98,19 @@ export default function RendimientoRapido() {
                         <>
                             <BalancesGrid
                                 columns={2}
-                                className="mb-6 mt-14"
+                                className="mb-3 mt-3"
                                 rows={[
                                     [
-                                        { label: "Available MXNB", value: `${mxnbBalance} MXNB`, icon: WalletIcon, highlightValue: true },
-                                        { label: "Your Liquidity", value: `${vaultAssetsBalance} MXNB`, icon: CircleStackIcon }
+                                        { label: "Your Pesos", value: `${mxnbBalance} MXNB`, icon: WalletIcon, highlightValue: true },
+                                        { label: "Your Deposits", value: `${vaultAssetsBalance} MXNB`, icon: CircleStackIcon }
                                     ],
+
                                     [
-                                        { label: "TVL", value: `${tvl} MXNB`, icon: BanknotesIcon },
-                                        { label: "APY", value: `${apy}%`, icon: ChartBarIcon }
+                                        { label: "APY", value: `${apy}%`, icon: ChartBarIcon },
+                                        { label: "TVL", value: `${tvl} MXNB`, icon: BanknotesIcon }
                                     ]
                                 ]}
                             />
-
                             {/* Main Content Area */}
                             {step === 4 && !loading ? (
                                 /* Success Screen (Deposit) */
@@ -140,11 +140,7 @@ export default function RendimientoRapido() {
                                         <div className="text-sm bg-[#0a0a0a] border border-[#264c73] p-4 rounded-lg space-y-2 text-left">
                                             <div className="flex justify-between">
                                                 <span className="text-gray-200">Total Withdrawn:</span>
-                                                <span className="text-white font-mono">{withdrawnAmount} MXNB</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-200">Yield Generated:</span>
-                                                <span className="text-[#4fe3c3] font-mono">{yieldEarned || "0.00"} MXNB</span>
+                                                <span className="text-[#4fe3c3] font-mono">{withdrawnAmount} MXNB</span>
                                             </div>
                                         </div>
                                     </div>

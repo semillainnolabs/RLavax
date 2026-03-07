@@ -86,18 +86,34 @@ export default function PrestamoRapido() {
                     ) : (
                         <>
                             <BalancesGrid
-                                columns={3}
-                                className="mb-2 mt-16"
+                                columns={2}
+                                className="mb-2 mt-2"
                                 rows={[
                                     [
-                                        { label: "USDC", value: `${usdcBalance} USDC`, icon: CircleStackIcon, highlightValue: true },
-                                        { label: "MXNB", value: `${mxnbBalance} MXNB`, icon: BanknotesIcon, highlightValue: true },
-                                        { label: "Collateral", value: `${collateralBalance} waUSDC`, icon: LockClosedIcon }
-                                    ],
+                                        { label: "Your Dollars", value: `${usdcBalance} USDC`, icon: CircleStackIcon, highlightValue: true },
+                                        { label: "Your Pesos", value: `${mxnbBalance} MXNB`, icon: BanknotesIcon, highlightValue: true }
+                                    ]
+                                ]}
+                            />
+
+                            <BalancesGrid
+                                columns={2}
+                                className="mb-2 mt-2"
+                                rows={[
                                     [
                                         { label: "Current Debt", value: `${borrowBalance} MXNB`, icon: CreditCardIcon },
+                                        { label: "Collateral Used", value: `${collateralBalance} USDC`, icon: LockClosedIcon }
+                                    ]
+                                ]}
+                            />
+
+                            <BalancesGrid
+                                columns={2}
+                                className="mb-2 mt-2"
+                                rows={[
+                                    [
                                         { label: "Rate (APR)", value: `${marketAPR}%`, icon: ChartBarIcon },
-                                        { label: "Liquidity", value: `${marketLiquidity} MXNB`, icon: CircleStackIcon }
+                                        { label: "Available", value: `${marketLiquidity} MXNB`, icon: CircleStackIcon }
                                     ]
                                 ]}
                             />
@@ -133,25 +149,20 @@ export default function PrestamoRapido() {
                                         <h3 className="text-2xl font-bold text-white mb-2">Payment Successful!</h3>
                                         <div className="text-sm bg-[#0a0a0a] border border-[#264c73] p-4 rounded-lg space-y-2 text-left">
                                             <div className="flex justify-between">
-                                                <span className="text-gray-200">Total Paid:</span>
-                                                <span className="text-white font-mono">{totalRepaidAmount || "Calculating..."} MXNB</span>
-                                            </div>
-                                            <div className="flex justify-between">
                                                 <span className="text-gray-200">Status:</span>
-                                                <span className="text-[#4fe3c3]">Debt Settled</span>
+                                                <span className="text-[#4fe3c3]">Debt Repaid</span>
                                             </div>
                                             {parseFloat(userPaidSubsidyInUSDC || "0") > 0 && (
                                                 <>
-                                                    <div className="h-px bg-[#264c73] my-2" />
+                                                    <div className="h-px bg-[#264c73] my-6" />
                                                     <div className="text-center">
                                                         <div className="text-xs text-[#4fe3c3] font-semibold mb-2 flex items-center justify-center gap-1">
                                                             💰 We've subsidized your loan interest!!!
                                                         </div>
                                                     </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-200">We gave you:</span>
-                                                        <span className="text-white font-mono">{userInterestInMxnb} MXNB (~= {userInterestInUSDC})</span>
-                                                        <span className="text-xs text-gray-200 font-mono">(Approx. {userInterestInUSDC} USDC)</span>
+                                                    <div className="flex flex-col items-center justify-center gap-2">
+                                                        <span className="text-gray-200">We gave you (approx.):</span>
+                                                        <span className="text-xl text-[#4fe3c3] font-bold font-mono">$USD {userPaidSubsidyInUSDC}</span>
                                                     </div>
                                                 </>
                                             )}

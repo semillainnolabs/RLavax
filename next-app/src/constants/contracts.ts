@@ -73,8 +73,9 @@ export const VAULT_ABI = [
     "function getInterestSubsidy(address user) external returns (uint256)",
     "function redeemWithInterestSubsidy(uint256 shares, address receiver, address owner) external returns (uint256)",
     "function userInterestSubsidyInWaUSDC(address) view returns (uint256)",
-    "function userInterestInMxnb(address) view returns (uint256)",
+    "function userInterestInMXNB(address) view returns (uint256)",
     "function userPaidSubsidyInUSDC(address) view returns (uint256)",
+    "function availableYield() view returns (uint256)",
 ];
 
 export const WMEMORY_ABI = [
@@ -86,7 +87,7 @@ export const WMEMORY_ABI = [
     "function getInterestSubsidy(address user) external returns (uint256)",
     "function redeemWithInterestSubsidy(uint256 shares, address receiver, address owner) external returns (uint256)",
     "function userInterestSubsidyInWaUSDC(address) view returns (uint256)",
-    "function userInterestInMxnb(address) view returns (uint256)",
+    "function userInterestInMXNB(address) view returns (uint256)",
     "function userPaidSubsidyInUSDC(address) view returns (uint256)",
 ];
 

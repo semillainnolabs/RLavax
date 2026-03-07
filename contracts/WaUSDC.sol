@@ -25,6 +25,7 @@ interface IWaUSDCMXNBOracle {
  *   deposits convert 1:1 with assets on initial deposit
  */
 contract WaUSDC is ERC4626, Ownable {
+    using Math for uint256;
     IERC20 public immutable aToken;
     uint8 private constant _decimals = 6;
     
