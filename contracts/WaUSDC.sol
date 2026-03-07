@@ -37,15 +37,29 @@ contract WaUSDC is ERC4626, Ownable {
 
     mapping(address => uint256) public userInterestSubsidyInWaUSDC; // subsidy reserved (aToken units, 6 decimals)
     mapping(address => uint256) public userInterestInMXNB; // bookkeeping (6 decimals)
+    mapping(address => uint256) public userPaidSubsidyInUSDC; // subsidy actually paid out (aUSDC units, 6 decimals)
     uint256 public totalAllocatedSubsidy;
 
     address public debtLens;
     address public mxnbUsdcOracle;
     bytes32 public marketId;
 
-    event SubsidyRequested(address indexed user, uint256 interestInMXNB, uint256 newReservedWaiver, uint256 delta);
+    event SubsidyRequested(
+        address indexed user,
+        uint256 interestInMXNB,
+        uint256 subsidyInWaUSDC,
+        uint256 desiredInAUSDC,
+        uint256 newReserved,
+        uint256 delta
+    );
     event SubsidyRevoked(address indexed user, uint256 amount);
-    event SubsidyUsed(address indexed user, uint256 amount);
+    event SubsidyUsed(
+        address indexed user,
+        uint256 principalReduced,
+        uint256 subsidyPaid,
+        uint256 totalOutput,
+        uint256 availableYield
+    );
     event PrincipalReduced(address indexed user, uint256 amount);
     event YieldWithdrawn(address indexed recipient, uint256 amount, uint256 timestamp);
     event DebtLensUpdated(address indexed oldDebtLens, address indexed newDebtLens);
@@ -192,6 +206,8 @@ contract WaUSDC is ERC4626, Ownable {
      * - Calculate subsidy in waUSDC equivalent: waUSDC = interestInMXNB * 1e36 / oraclePrice
      * - Convert to aUSDC units using vault's current conversion rate
      * - Adjust stored reservation to desired (delta logic) so repeated calls are safe
+     * 
+     * Emits detailed debugging info: interestInMXNB, subsidyInWaUSDC, desiredInAUSDC, delta
      */
     function getInterestSubsidy(address user) external returns (uint256 newReserved) {
         require(user != address(0), "zero user");
@@ -223,7 +239,7 @@ contract WaUSDC is ERC4626, Ownable {
         uint256 current = userInterestSubsidyInWaUSDC[user];
 
         if (desired == current) {
-            emit SubsidyRequested(user, interestInMXNB, desired, 0);
+            emit SubsidyRequested(user, interestInMXNB, subsidyInWaUSDC, desired, desired, 0);
             return desired;
         } else if (desired > current) {
             uint256 delta = desired - current;
@@ -231,7 +247,7 @@ contract WaUSDC is ERC4626, Ownable {
             require(delta <= avail, "insufficient available yield");
             userInterestSubsidyInWaUSDC[user] = desired;
             totalAllocatedSubsidy += delta;
-            emit SubsidyRequested(user, interestInMXNB, desired, delta);
+            emit SubsidyRequested(user, interestInMXNB, subsidyInWaUSDC, desired, desired, delta);
             return desired;
         } else {
             // desired < current -> free up difference
@@ -249,7 +265,10 @@ contract WaUSDC is ERC4626, Ownable {
      * - reduces principal proportionally
      * - uses stored subsidy (capped by availableYield)
      * - transfers principalReduction + subsidy to receiver
+     * - tracks userPaidSubsidyInUSDC for the user
      * - vault keeps extra yield (principal share of yield not transferred)
+     * 
+     * Emits: principalReduced, subsidyPaid, totalOutput, availableYield for debugging
      */
     function redeemWithInterestSubsidy(uint256 shares, address receiver, address owner) external returns (uint256 totalOut) {
         require(shares > 0, "zero shares");
@@ -274,14 +293,19 @@ contract WaUSDC is ERC4626, Ownable {
 
         uint256 stored = userInterestSubsidyInWaUSDC[owner];
         uint256 subsidyToUse = 0;
+        userPaidSubsidyInUSDC[owner] = 0;
         if (stored > 0) {
             uint256 avail = availableYield();
             subsidyToUse = stored <= avail ? stored : avail;
             if (subsidyToUse > 0) {
-                userInterestSubsidyInWaUSDC[owner] -= subsidyToUse;
-                totalAllocatedSubsidy -= subsidyToUse;
-                emit SubsidyUsed(owner, subsidyToUse);
+                // Track how much subsidy was actually paid to this user
+                userPaidSubsidyInUSDC[owner] = subsidyToUse;
+                
+                uint256 availableAfter = availableYield();
+                emit SubsidyUsed(owner, principalReduction, subsidyToUse, principalReduction + subsidyToUse, availableAfter);
             }
+            totalAllocatedSubsidy -= userInterestSubsidyInWaUSDC[owner];
+            userInterestSubsidyInWaUSDC[owner] = 0;
         }
 
         totalOut = principalReduction + subsidyToUse;
