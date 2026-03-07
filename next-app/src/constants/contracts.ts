@@ -12,9 +12,9 @@ export const CONTRACT_ADDRESSES = {
     mockMXNB: "0xF19D2F986DC0fb7E2A82cb9b55f7676967F7bC3E",
     
     // Wrapper & Vault Addresses
-    waUSDC: "0x49Ab775EfC143A16D79C40F18B37feB57C7D4fa8",
+    waUSDC: "0x0eEDF0cDFB2801627c3e4f53cE5bd7094936Defe",
     morphoUSDCVault: "0xA694354Ab641DFB8C6fC47Ceb9223D12cCC373f9",
-    morphoMXNBVault: "0x250aDD3393D4856caaF2390A8Fd545046a9ab83d",
+    morphoMXNBVault: "0x75Aa9290a722A6F5B279ECd7f4CdB35f91D490b3",
     
     // From Aave's official contracts
     aavePool: "0x8bAB6d1b75f19e9eD9fCe8b9BD338844fF79aE27",
@@ -30,11 +30,12 @@ export const CONTRACT_ADDRESSES = {
 
     // Others
     mxnbFaucet: "0xcCAbA8fA0FAB8c0452945FfBce70c8040e651142",
+    debtLens: "0x14751F624968372878cDE4238e84Fb3D980C4F05",
 };
 
 export const MARKET_IDS = {
     usdc: "0x6af42641dd1ddc4fd0c3648e45497a29b78eb50d21fd0f6eac7b8eae2192dd47",
-    mxnb: "0x77d8f53c55ae5d84ab46d5f4d38a5cd35a18d3599033f1b251f2e419787d573a",
+    mxnb: "0x471d05b4e3b084e254341f5d82f794ceb63d587c110cd95d83e4fdbb6b6546c4",
 };
 
 // Morpho Blue Market Params Tuple
