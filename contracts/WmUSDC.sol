@@ -24,9 +24,9 @@ interface IDebtLens {
 }
 
 /**
- * @notice Interface for WmusdcMxnbOracle to get price conversion
+ * @notice Interface for WmusdcMxneOracle to get price conversion
  */
-interface IWmusdcMxnbOracle {
+interface IWmusdcMxneOracle {
     function price() external view returns (uint256);
 }
 
@@ -51,7 +51,7 @@ contract WmUSDC is ERC20, ERC4626, Ownable {
 
     // Deployed contract addresses for interest subsidy
     address public debtLens = 0x14751F624968372878cDE4238e84Fb3D980C4F05;
-    address public mxnbUsdcOracle = 0x9f4b138BF3513866153Af9f0A2794096DFebFaD4;
+    address public mxneUsdcOracle = 0x9f4b138BF3513866153Af9f0A2794096DFebFaD4;
     bytes32 public marketId = 0xf912f62db71d01c572b28b6953c525851f9e0660df4e422cec986e620da726df;
 
     // Track per-user deposits in USDC-equivalent value
@@ -60,7 +60,7 @@ contract WmUSDC is ERC20, ERC4626, Ownable {
     mapping(address => uint256) public userGeneratedYieldInShares;
     mapping(address => uint256) public userGeneratedYieldInUSDC;
     mapping(address => uint256) public userInterestSubsidyInWmUSDC;
-    mapping(address => uint256) public userInterestInMxnb;
+    mapping(address => uint256) public userInterestInMxne;
     mapping(address => uint256) public userPaidSubsidyInUSDC;
     
     
@@ -70,9 +70,9 @@ contract WmUSDC is ERC20, ERC4626, Ownable {
     event WithdrawnWithSubsidy(address indexed owner, address receiver, uint256 sharesInWmusdc, uint256 assetsInMusdc, uint256 yieldInMusdc,uint256 yieldInUsdc, uint256 subsidyInMusdc, uint256 subsidyInUsdc );
     event YieldWithdrawn(address indexed recipient, uint256 amount, uint256 timestamp);
     event DebtLensUpdated(address indexed oldDebtLens, address indexed newDebtLens);
-    event MxnbUsdcOracleUpdated(address indexed oldOracle, address indexed newOracle);
+    event MxneUsdcOracleUpdated(address indexed oldOracle, address indexed newOracle);
     event MarketIdUpdated(bytes32 indexed oldMarketId, bytes32 indexed newMarketId);
-    event GetSubsidy(address indexed user, uint256 interestInMxnb, uint256 oraclePrice, uint256 userInterestSubsidyInWmUSDC);
+    event GetSubsidy(address indexed user, uint256 interestInMxne, uint256 oraclePrice, uint256 userInterestSubsidyInWmUSDC);
 
     /**
      * @notice Initialize the WmUSDC wrapper
@@ -309,36 +309,36 @@ contract WmUSDC is ERC20, ERC4626, Ownable {
     }
 
     /**
-     * @notice Calculate the interest subsidy amount in WmUSDC for a user's MXNB market debt
+     * @notice Calculate the interest subsidy amount in WmUSDC for a user's MXNE market debt
      * @param user The user address
      * @return subsidy Amount of WmUSDC equivalent to the accrued interest
      * @dev
-     * - Gets accrued interest from DebtLens (in MXNB with 6 decimals)
-     * - Converts MXNB amount to WmUSDC equivalent using the oracle price
+     * - Gets accrued interest from DebtLens (in MXNE with 6 decimals)
+     * - Converts MXNE amount to WmUSDC equivalent using the oracle price
      * - Stores the result in interestSubsidyInWmUSDC[user] for later use in redeemWithInterestSubsidy
      * - User should call this during the repay process to record their interest subsidy
      */
     function getInterestSubsidy(address user) external returns (uint256 subsidy) {
-        // Get accrued interest in MXNB (6 decimals)
-        uint256 interestInMxnb = IDebtLens(debtLens).getAccruedInterest(marketId, user);
-        userInterestInMxnb[user] = interestInMxnb;
+        // Get accrued interest in MXNE (6 decimals)
+        uint256 interestInMxne = IDebtLens(debtLens).getAccruedInterest(marketId, user);
+        userInterestInMxne[user] = interestInMxne;
         
-        if (interestInMxnb == 0) return 0;
+        if (interestInMxne == 0) return 0;
         
-        // Get oracle price: how many MXNB per WmUSDC (scaled by 1e48)
-        // Formula: WmusdcAmount = MxnbAmount * OraclePrice / 1e48
-        // Since MXNB has 6 decimals and mUSDC has 18 decimals:
+        // Get oracle price: how many MXNE per WmUSDC (scaled by 1e48)
+        // Formula: WmusdcAmount = MxneAmount * OraclePrice / 1e48
+        // Since MXNE has 6 decimals and mUSDC has 18 decimals:
         // We need to scale appropriately
-        uint256 oraclePrice = IWmusdcMxnbOracle(mxnbUsdcOracle).price();
+        uint256 oraclePrice = IWmusdcMxneOracle(mxneUsdcOracle).price();
         
-        // Price is in format: MXNB (6 decimals) per WmUSDC (18 decimals) scaled by 1e36
-        // Result: interestInMxnb (6 decimals) * oraclePrice / 1e36 = wmUSDC equivalent (18 decimals)
-        uint256 wmUSDCWith18Decimals = (interestInMxnb * 1e36) / oraclePrice;
+        // Price is in format: MXNE (6 decimals) per WmUSDC (18 decimals) scaled by 1e36
+        // Result: interestInMxne (6 decimals) * oraclePrice / 1e36 = wmUSDC equivalent (18 decimals)
+        uint256 wmUSDCWith18Decimals = (interestInMxne * 1e36) / oraclePrice;
         
         // Store the subsidy for later use in redeemWithInterestSubsidy
         userInterestSubsidyInWmUSDC[user] = wmUSDCWith18Decimals;
 
-        emit GetSubsidy(user,interestInMxnb,oraclePrice,wmUSDCWith18Decimals);
+        emit GetSubsidy(user,interestInMxne,oraclePrice,wmUSDCWith18Decimals);
 
         return wmUSDCWith18Decimals;
     }
@@ -353,7 +353,7 @@ contract WmUSDC is ERC20, ERC4626, Ownable {
      * Combines the standard redeem with an interest subsidy:
      * - Burns user's WmUSDC shares
      * - Returns mUSDC for original shares
-     * - Plus additional mUSDC equal to interest paid in MXNB market (if available)
+     * - Plus additional mUSDC equal to interest paid in MXNE market (if available)
      */
     function redeemWithInterestSubsidy(
         uint256 shares,
@@ -549,13 +549,13 @@ contract WmUSDC is ERC20, ERC4626, Ownable {
     }
 
     /**
-     * @notice Set the MXNB/USDC Oracle address
-     * @param _mxnbUsdcOracle The new Oracle address
+     * @notice Set the MXNE/USDC Oracle address
+     * @param _mxneUsdcOracle The new Oracle address
      */
-    function setMxnbUsdcOracle(address _mxnbUsdcOracle) external onlyOwner {
-        require(_mxnbUsdcOracle != address(0), "Invalid address");
-        emit MxnbUsdcOracleUpdated(mxnbUsdcOracle, _mxnbUsdcOracle);
-        mxnbUsdcOracle = _mxnbUsdcOracle;
+    function setMxneUsdcOracle(address _mxneUsdcOracle) external onlyOwner {
+        require(_mxneUsdcOracle != address(0), "Invalid address");
+        emit MxneUsdcOracleUpdated(mxneUsdcOracle, _mxneUsdcOracle);
+        mxneUsdcOracle = _mxneUsdcOracle;
     }
 
     /**
