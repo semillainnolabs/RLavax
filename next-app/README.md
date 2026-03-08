@@ -1,5 +1,5 @@
 > [!IMPORTANT]
-> Due to the complexity of our logic/architecture, RapiLoans requires intensive testing and contract auditing before deployment to Mainnet. The PoC was deployed in Base Sepolia because that is the Testnet where official Aave and Morpho smart contracts are present. However, a working limited PoC was also built for running in Avalanche Fuji, see "fuji-borrow-working" branch [here](https://github.com/semillainnolabs/RLavax/tree/fuji-borrow-working), with Aave and Morpho mock contracts deployed by our team.
+> Due to the complexity of our logic/architecture, RapiLoans requires intensive testing and contract auditing before deployment to Mainnet. The PoC was deployed in Base Sepolia because that is the Testnet where official Aave and Morpho smart contracts are present. However, a working limited PoC was also built for running in Avalanche Fuji, see "fuji-borrow-working" branch [here](https://github.com/semillainnolabs/RLavax/tree/fuji-borrow-working), with Aave and Morpho mock contracts deployed by our team, to see the Fuji addresses of the smart contracts [click here](https://github.com/semillainnolabs/RLavax/blob/fuji-borrow-working/next-app/src/constants/contracts.ts).
 > For testing the Borrow and Lend features in Base Sepolia, you will need Sepolia ETH, USDC (Aave's version of USDC) and mockMXNB(our version of MXNB). For getting the tokens you need to:
 > 1. We've created a smart contract faucet for mockMXNB tokens, deployed to Base Sepolia. You only need to send Sepolia ETH from your wallet to the SC's address(`0xcCAbA8fA0FAB8c0452945FfBce70c8040e651142`) in Base Sepolia and the SC will automatically transfer back the corresponding amount of mockMXNB tokens(the FX rate is 1 ETH to 33548.87 mockMXNB). The Faucet smart contract is located at `/contracts/MXNBFacucet.sol`. For checking the real time liquidity of the faucet in Sepolia Basescan [click here](https://sepolia.basescan.org/address/0xcCAbA8fA0FAB8c0452945FfBce70c8040e651142), which is nearly 100M mockMXNB.
 > 2. For simplicity we decided to use Aave's USDC which already have a faucet available in Base Sepolia. To get the USDC [click here](https://app.aave.com/faucet/), please remember to enable the Testnet mode in Aave first.
@@ -204,7 +204,7 @@ USDC Deposits → Aave Yield → Protocol Capital → 0% APR + Rewards(Optional)
 
 | Revenue Source | Amount | Use Case |
 |----------------|--------|----------|
-| **Yield Spread** | 4-10% annual on USDC's TVL | Protocol buffer & rewards reserve |
+| **Yield Spread** | 10-20% annual on USDC's TVL | Protocol buffer & rewards reserve |
 | **Excess Yield** | After subsidy coverage | DAO treasury, governance token buyback |
 | **Incentive Rewards** | Portion of spread | Lender APY boost (attract capital) |
 | **Borrower Penalties** | Late repay fees | Risk management, insurance pool |
@@ -348,9 +348,59 @@ Price oracle providing WmUSDC/MXNB exchange rate for Morpho Blue markets.
 - Safe pricing for risk management
 - 77% LTV (Loan-to-Value) ratio
 
-### 4. **MXNBFaucet.sol** (Testnet)
+### 4. **DebtLens.sol** 
+Contract that interacts with the Morpho MXNe market to calculate the user's accrued interest.
+
+### 5. **MXNBFaucet.sol** (Testnet)
 Faucet contract for minting test MXNB tokens during development.
 
+---
+
+## 💻 Proof Of Deployments
+
+### Smart Contracts Deployed to Avalanche Fuji
+```bash
+# Mock Token Addresses
+mockMXNB: "0x1DA5199ecaAe23F85c7fd7611703E81273041149"
+mockUSDC: "0x789D299321f194B47f3b72d33d0e028376277AA3"
+
+# Wrapper & Vault Addresses
+waUSDC: "0x9Eb972888Bc1D52B0cAB77ED00Cfd911Be92F44a"
+irm: "0x3623f733b587FE63F7365648312E007148a15bB5"
+
+# Mock Aave
+aavePool: "0x2a2e2346404fab3b4B521f2eA4D052D5BA10aaB6"
+aUSDC: "0xC39F2C3522ed1C2E8bCb40D34445f6Eacc94bEBE"
+
+# Mock Morpho Addresses
+morphoBlue: "0xBF36b45ccD42a178ac8b22e7271d87abbBE7c8a2"
+
+# Oracle Addresses
+fixedPriceOracle: "0xB376ebF210a64AE13A33DDB58047B6BF9E326330"
+```
+
+### Smart Contracts Deployed to Base Sepolia
+```bash
+# Base Sepolia Mock Token Addresses
+mockMXNB: "0xF19D2F986DC0fb7E2A82cb9b55f7676967F7bC3E"
+
+# Wrapper & Vault Addresses
+waUSDC: "0x0eEDF0cDFB2801627c3e4f53cE5bd7094936Defe",
+morphoMXNBVault: "0x75Aa9290a722A6F5B279ECd7f4CdB35f91D490b3",
+
+# Oracle Addresses
+wausdcMxnbOracle: "0xd098996B7A59de95357fF0EE3C2018eF0278Cf37"
+
+# Aave's and Morpho's official contracts
+aavePool: "0x8bAB6d1b75f19e9eD9fCe8b9BD338844fF79aE27"
+aUSDC: "0x10f1a9d11cdf50041f3f8cb7191cbe2f31750acc"
+usdc: "0xba50cd2a20f6da35d788639e581bca8d0b5d4d5f"
+morphoBlue: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb"
+
+# Additional Tools
+mxnbFaucet: "0xcCAbA8fA0FAB8c0452945FfBce70c8040e651142"
+debtLens: "0x14751F624968372878cDE4238e84Fb3D980C4F05"
+```
 ---
 
 ## 📊 Morpho Blue Market Configuration
