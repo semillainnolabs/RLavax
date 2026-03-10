@@ -6,20 +6,22 @@ import {
     CONTRACT_ADDRESSES,
     ERC20_ABI,
     VAULT_ABI,
+    WMEMORY_ABI,
     MORPHO_ABI,
     IRM_ABI,
     AAVE_ABI,
     MXNB_MARKET_PARAMS,
     MARKET_IDS,
 } from '../constants/contracts';
+import { useWalletId } from './useWalletId';
 
 const TARGET_LTV = 0.50; // Conservative LTV target for calculation
 const USDC_DECIMALS = 6;
 const MXNB_DECIMALS = 6;
-const MANUAL_GAS_LIMIT = 5000000n; // Fixed gas limit for testnet stability
 
 export const useMorphoLoan = () => {
     const { wallets } = useWallets();
+    const { walletId } = useWalletId();
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState(0); // 0: Idle, 1...
     const [error, setError] = useState<string | null>(null);
@@ -48,19 +50,15 @@ export const useMorphoLoan = () => {
         return `${integer}.${fraction.substring(0, 1)}`;
     };
 
-    const getSigner = useCallback(async () => {
-        const wallet = wallets[0];
-        if (!wallet) throw new Error("Wallet not connected");
-        const provider = await wallet.getEthereumProvider();
-        const ethersProvider = new ethers.BrowserProvider(provider);
-        return ethersProvider.getSigner();
-    }, [wallets]);
+    // Read-only provider — no wallet signing needed for reads
+    const getProvider = useCallback(() => {
+        return new ethers.JsonRpcProvider(BASE_SEPOLIA_CONFIG.rpcUrl);
+    }, []);
 
     const fetchMarketAPR = useCallback(async () => {
         try {
-            if (!wallets.length) return;
-            const signer = await getSigner();
-            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, signer);
+            const provider = getProvider();
+            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, provider);
 
             const marketDetails = await morpho.market(MARKET_IDS.mxnb);
             const totalSupplyAssets = Number(ethers.formatUnits(marketDetails.totalSupplyAssets, MXNB_DECIMALS));
@@ -69,7 +67,7 @@ export const useMorphoLoan = () => {
             setTotalSupplied(totalSupplyAssets);
             setTotalBorrowed(totalBorrowAssets);
 
-            const irmContract = new ethers.Contract(MXNB_MARKET_PARAMS.irm, IRM_ABI, signer);
+            const irmContract = new ethers.Contract(MXNB_MARKET_PARAMS.irm, IRM_ABI, provider);
             const marketTuple = [
                 marketDetails[0], marketDetails[1], marketDetails[2],
                 marketDetails[3], marketDetails[4], marketDetails[5],
@@ -94,19 +92,21 @@ export const useMorphoLoan = () => {
         } catch (err) {
             console.error("Error fetching market APR:", err);
         }
-    }, [wallets, getSigner]);
+    }, [getProvider]);
 
     const refreshData = useCallback(async () => {
         try {
             if (!wallets.length) return;
-            const signer = await getSigner();
-            const userAddress = await signer.getAddress();
+            const userAddress = wallets[0]?.address;
+            if (!userAddress) return;
 
-            const usdcContract = new ethers.Contract(CONTRACT_ADDRESSES.usdc, ERC20_ABI, signer);
+            const provider = getProvider();
+
+            const usdcContract = new ethers.Contract(CONTRACT_ADDRESSES.usdc, ERC20_ABI, provider);
             const bal = await usdcContract.balanceOf(userAddress);
             setUsdcBalance(formatBalance(bal, USDC_DECIMALS));
 
-            const mxnbContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
+            const mxnbContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, provider);
             const targetBalance = await mxnbContract.balanceOf(userAddress);
             setMxnbBalance(formatBalance(targetBalance, MXNB_DECIMALS));
 
@@ -122,7 +122,7 @@ export const useMorphoLoan = () => {
                     ]
                 )
             );
-            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, signer);
+            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, provider);
             const position = await morpho.position(marketId, userAddress);
 
             const marketData = await morpho.market(marketId);
@@ -137,7 +137,7 @@ export const useMorphoLoan = () => {
             const safeLiquidity = liquidityAssets > 0n ? liquidityAssets : 0n;
             setMarketLiquidity(formatBalance(safeLiquidity, MXNB_DECIMALS));
 
-            const oracle = new ethers.Contract(MXNB_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], signer);
+            const oracle = new ethers.Contract(MXNB_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], provider);
             const price = await oracle.price();
             setOraclePrice(price);
 
@@ -145,7 +145,7 @@ export const useMorphoLoan = () => {
         } catch (err) {
             console.error("Error refreshing data:", err);
         }
-    }, [wallets, getSigner, fetchMarketAPR]);
+    }, [wallets, getProvider, fetchMarketAPR]);
 
     useEffect(() => {
         refreshData();
@@ -168,8 +168,6 @@ export const useMorphoLoan = () => {
         if (!borrowAmount || parseFloat(borrowAmount) <= 0) return "0";
         if (oraclePrice === 0n) {
             const amount = parseFloat(borrowAmount);
-            // 1 waUSDC is roughly 1 USDC. 
-            // We use simple LTV math. Let's assume price 1.
             const requiredUSDCApprox = amount / TARGET_LTV;
             return requiredUSDCApprox.toFixed(2);
         }
@@ -181,25 +179,13 @@ export const useMorphoLoan = () => {
             const numerator = borrowAssets * (10n ** 54n); // 6 + 54 = 60
             const denominator = oraclePrice * TARGET_LTV_WAD;
 
-            const requiredCollateralWaUSDC = numerator / denominator;
-            const depositAmountBN = requiredCollateralWaUSDC;
+            const depositAmountBN = numerator / denominator;
             return ethers.formatUnits(depositAmountBN, USDC_DECIMALS);
         } catch (e) {
             console.error("Error calculating deposit:", e);
             return "0";
         }
     };
-
-    const waitForAllowance = async (tokenContract: ethers.Contract, owner: string, spender: string, requiredAmount: bigint) => {
-        let retries = 0;
-        while (retries < 10) {
-            const currentAllowance = await tokenContract.allowance(owner, spender);
-            if (currentAllowance >= requiredAmount) return;
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            retries++;
-        }
-        throw new Error("Allowance failed to propagate. Please try again.");
-    }
 
     const waitForBalanceIncrease = async (tokenContract: ethers.Contract, userAddress: string, initialBalance: bigint) => {
         let retries = 0;
@@ -212,49 +198,24 @@ export const useMorphoLoan = () => {
         return await tokenContract.balanceOf(userAddress);
     };
 
-    const waitForSubsidyIncrease = async (
-        tokenContract: ethers.Contract,
-        userAddress: string,
-        initialBalance: bigint
-    ) => {
-        let retries = 0;
-        while (retries < 15) {
-            const currentBalance = await tokenContract.userInterestSubsidyInWaUSDC(userAddress);
-            if (currentBalance > initialBalance) return currentBalance;
-
-            console.log(`Waiting for USDC subsidy update... Attempt ${retries + 1}/15, balance:${currentBalance}`);
-            await new Promise(resolve => setTimeout(resolve, 2500)); // Wait 2.5s
-            retries++;
-        }
-        console.log("RPC timeout: The network is slow indexing your new subsidy. Please wait a moment and try again.");
-        return await tokenContract.userInterestSubsidyInWaUSDC(userAddress);
-        throw new Error("RPC timeout: The network is slow indexing your new subsidy. Please wait a moment and try again.");
-    };
-
     const executeZale = async (borrowAmountMXNB: string) => {
         setLoading(true);
         setError(null);
         setStep(1);
 
         try {
-            const signer = await getSigner();
-            const userAddress = await signer.getAddress();
-
-            const provider = signer.provider;
-            const network = await provider?.getNetwork();
-            if (network?.chainId !== BigInt(BASE_SEPOLIA_CONFIG.chainId)) {
-                throw new Error("Wrong network detected during execution.");
+            const userAddress = wallets[0]?.address;
+            console.log("Intentando ejecutar con walletId:", walletId);
+            if (!walletId || !userAddress) {
+                setError("Wallet not ready. Please try again in a moment.");
+                setLoading(false);
+                return;
             }
 
-            console.log(`Starting Zale: Borrow ${borrowAmountMXNB} MXNB`);
+            console.log(`Starting Zale: Borrow ${borrowAmountMXNB} MXNB via APIs`);
+            const provider = getProvider();
 
-            const usdc = new ethers.Contract(CONTRACT_ADDRESSES.usdc, ERC20_ABI, signer);
-            const aavePool = new ethers.Contract(CONTRACT_ADDRESSES.aavePool, AAVE_ABI, signer);
-            const aUSDC = new ethers.Contract(CONTRACT_ADDRESSES.aUSDC, ERC20_ABI, signer);
-            const waUSDC = new ethers.Contract(CONTRACT_ADDRESSES.waUSDC, VAULT_ABI, signer);
-            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, signer);
-
-            const oracle = new ethers.Contract(MXNB_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], signer);
+            const oracle = new ethers.Contract(MXNB_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], provider);
             const currentPrice = await oracle.price();
 
             const borrowAmountBN = ethers.parseUnits(borrowAmountMXNB, MXNB_DECIMALS);
@@ -263,108 +224,84 @@ export const useMorphoLoan = () => {
             const numerator = borrowAmountBN * (10n ** 54n);
             const denominator = currentPrice * TARGET_LTV_WAD;
             const depositAmountBN = numerator / denominator;
+            const amountStr = ethers.formatUnits(depositAmountBN, USDC_DECIMALS);
 
-            // 1. Approve USDC for Aave
-            console.log("Step 1: Checking USDC Allowance for Aave");
-            const usdcAllowance = await usdc.allowance(userAddress, CONTRACT_ADDRESSES.aavePool);
-            if (usdcAllowance < depositAmountBN) {
-                const tx = await usdc.approve(CONTRACT_ADDRESSES.aavePool, ethers.MaxUint256, { gasLimit: MANUAL_GAS_LIMIT });
-                setTxHash(tx.hash);
-                await tx.wait();
-                await waitForAllowance(usdc, userAddress, CONTRACT_ADDRESSES.aavePool, depositAmountBN);
-            }
+            // 1. Lend USDC -> mUSDC (also handles approve)
+            setStep(1);
+            console.log("Step 1 & 2: Lending USDC to get mUSDC via API");
 
-            const initialAUsdcBalance = await aUSDC.balanceOf(userAddress);
+            const mUSDCContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoUSDCVault, ERC20_ABI, provider);
+            const initialMUsdcBalance = await mUSDCContract.balanceOf(userAddress);
 
-            // 2. Supply USDC to Aave (get aUSDC)
+            const lendRes = await fetch("/api/lend", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ walletId, userAddress, amount: amountStr }),
+            });
+            const lendData = await lendRes.json();
+            if (!lendRes.ok || lendData.error) throw new Error(lendData.error || "Lend failed");
+            setTxHash(lendData.depositHash);
+
             setStep(2);
-            console.log("Step 2: Supplying USDC to Aave");
-            const tx2 = await aavePool.supply(CONTRACT_ADDRESSES.usdc, depositAmountBN, userAddress, 0, { gasLimit: MANUAL_GAS_LIMIT });
-            setTxHash(tx2.hash);
-            await tx2.wait();
-            await waitForBalanceIncrease(aUSDC, userAddress, initialAUsdcBalance);
-            const aUsdcBalance = await aUSDC.balanceOf(userAddress);
+            const musdcBalance = await waitForBalanceIncrease(mUSDCContract, userAddress, initialMUsdcBalance);
 
-            // 3. Approve aUSDC for waUSDC
+            // 2. Wrap mUSDC -> waUSDC (also handles approve)
             setStep(3);
-            console.log("Step 3: Approving aUSDC to waUSDC Vault");
-            const waUSDCAllowance = await aUSDC.allowance(userAddress, CONTRACT_ADDRESSES.waUSDC);
-            if (waUSDCAllowance < aUsdcBalance) {
-                const tx3 = await aUSDC.approve(CONTRACT_ADDRESSES.waUSDC, ethers.MaxUint256, { gasLimit: MANUAL_GAS_LIMIT });
-                setTxHash(tx3.hash);
-                await tx3.wait();
-                await waitForAllowance(aUSDC, userAddress, CONTRACT_ADDRESSES.waUSDC, aUsdcBalance);
-            }
+            console.log("Step 3 & 4: Wrapping mUSDC to waUSDC via API");
 
+            const waUSDC = new ethers.Contract(CONTRACT_ADDRESSES.waUSDC, VAULT_ABI, provider);
             const initialWaUsdcBalance = await waUSDC.balanceOf(userAddress);
 
-            // 4. Deposit in waUSDC
+            const wrapRes = await fetch("/api/wrap", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ walletId, userAddress, musdcAmount: musdcBalance.toString() }),
+            });
+            const wrapData = await wrapRes.json();
+            if (!wrapRes.ok || wrapData.error) throw new Error(wrapData.error || "Wrap failed");
+            setTxHash(wrapData.wrapHash);
+
             setStep(4);
-            console.log("Step 4: Deposit in waUSDC");
-            const tx4 = await waUSDC.deposit(aUsdcBalance, userAddress, { gasLimit: MANUAL_GAS_LIMIT });
-            setTxHash(tx4.hash);
-            await tx4.wait();
-            await waitForBalanceIncrease(waUSDC, userAddress, initialWaUsdcBalance);
+            const wmusdcBalance = await waitForBalanceIncrease(waUSDC, userAddress, initialWaUsdcBalance);
 
-            // 5. Approve waUSDC for Morpho Blue
+            // 3. Supply Collateral via API (also handles approve)
             setStep(5);
-            console.log("Step 5: Approving waUSDC for Morpho Blue");
-            const wmusdcBalance = await waUSDC.balanceOf(userAddress);
-            const wmusdcAllowance = await waUSDC.allowance(userAddress, CONTRACT_ADDRESSES.morphoBlue);
-            if (wmusdcAllowance < wmusdcBalance) {
-                const tx7 = await waUSDC.approve(CONTRACT_ADDRESSES.morphoBlue, ethers.MaxUint256, { gasLimit: MANUAL_GAS_LIMIT });
-                setTxHash(tx7.hash);
-                await tx7.wait();
-                await waitForAllowance(waUSDC, userAddress, CONTRACT_ADDRESSES.morphoBlue, wmusdcBalance);
-            }
+            console.log("Step 5 & 6: Supplying Collateral via API");
 
-            // 6. Supply Collateral to Morpho
+            const supplyRes = await fetch('/api/supply-collateral', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ walletId, userAddress, wmusdcAmount: wmusdcBalance.toString() })
+            });
+            const supplyData = await supplyRes.json();
+            if (!supplyRes.ok || supplyData.error) throw new Error(supplyData.error || "Supply failed");
+
+            setTxHash(supplyData.supplyHash);
             setStep(6);
-            console.log("Step 6: Supplying Collateral");
-            const MXNB_MARKET_PARAMS_ARRAY = [
-                MXNB_MARKET_PARAMS.loanToken,
-                MXNB_MARKET_PARAMS.collateralToken,
-                MXNB_MARKET_PARAMS.oracle,
-                MXNB_MARKET_PARAMS.irm,
-                MXNB_MARKET_PARAMS.lltv
-            ];
-            const currentWaUSDCBalance = await waUSDC.balanceOf(userAddress);
-            if (currentWaUSDCBalance <= 0n) throw new Error("Cannot supply 0 collateral.");
+            await new Promise(r => setTimeout(r, 2000));
 
-            const tx8 = await morpho.supplyCollateral(
-                MXNB_MARKET_PARAMS_ARRAY,
-                currentWaUSDCBalance,
-                userAddress,
-                "0x",
-                { gasLimit: MANUAL_GAS_LIMIT }
-            );
-
-            setTxHash(tx8.hash);
-            await tx8.wait();
-
-            // 7. Borrow MXNB
+            // 4. Borrow MXNB via API
             setStep(7);
-            console.log("Step 7: Borrowing MXNB");
-            const tx9 = await morpho.borrow(MXNB_MARKET_PARAMS_ARRAY, borrowAmountBN, 0, userAddress, userAddress, { gasLimit: MANUAL_GAS_LIMIT });
-            setTxHash(tx9.hash);
-            await tx9.wait();
+            console.log("Step 7: Borrowing MXNB via API");
+
+            const borrowRes = await fetch('/api/borrow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ walletId, userAddress, borrowAmount: borrowAmountMXNB })
+            });
+            const borrowData = await borrowRes.json();
+            if (!borrowRes.ok || borrowData.error) throw new Error(borrowData.error || "Borrow failed");
+
+            setTxHash(borrowData.borrowHash);
 
             setStep(8); // Complete
             await refreshData();
             setLoading(false);
 
         } catch (err: any) {
-            let msg = err.reason
-            console.log({
-                reason: err.reason,
-                message: err.message
-            });
-
+            console.error("Zale error:", err);
+            let msg = err.reason || err.message || "Transaction failed";
             if (msg.includes("rejected")) msg = "You rejected the transaction";
-            if (msg.includes("estimateGas")) msg = "Gas error.";
-            if (msg.includes("allowance")) msg = "Approval failed.";
-            if (msg.includes("collateral")) msg = "Insufficient collateral.";
-            if (msg.includes("transaction execution reverted")) msg = "The transaction was reverted, due to insufficient collateral. Please try again.";
             else msg = "Transaction failed. Please try again.";
             setError(msg);
         } finally {
@@ -373,6 +310,7 @@ export const useMorphoLoan = () => {
             }
         }
     };
+
     // Pay all and withdraw
     const executeRepayAndWithdraw = async () => {
         setLoading(true);
@@ -381,27 +319,29 @@ export const useMorphoLoan = () => {
         setStep(11);
 
         try {
-            const signer = await getSigner();
-            const userAddress = await signer.getAddress();
+            const userAddress = wallets[0]?.address;
+            if (!walletId || !userAddress) {
+                setError("Wallet not ready. Please try again in a moment.");
+                setLoading(false);
+                return;
+            }
 
-            const mxnb = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, signer);
-            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, signer);
-            const waUSDC = new ethers.Contract(CONTRACT_ADDRESSES.waUSDC, VAULT_ABI, signer);
-            const aavePool = new ethers.Contract(CONTRACT_ADDRESSES.aavePool, AAVE_ABI, signer);
-            const aUSDC = new ethers.Contract(CONTRACT_ADDRESSES.aUSDC, ERC20_ABI, signer);
-
-            const MXNB_MARKET_PARAMS_ARRAY = [
-                MXNB_MARKET_PARAMS.loanToken,
-                MXNB_MARKET_PARAMS.collateralToken,
-                MXNB_MARKET_PARAMS.oracle,
-                MXNB_MARKET_PARAMS.irm,
-                MXNB_MARKET_PARAMS.lltv
-            ];
+            const provider = getProvider();
+            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, provider);
+            const mxnb = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, provider);
+            const waUSDC = new ethers.Contract(CONTRACT_ADDRESSES.waUSDC, VAULT_ABI, provider);
+            const mUSDCContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoUSDCVault, ERC20_ABI, provider);
 
             const marketId = ethers.keccak256(
                 ethers.AbiCoder.defaultAbiCoder().encode(
                     ["address", "address", "address", "address", "uint256"],
-                    MXNB_MARKET_PARAMS_ARRAY
+                    [
+                        MXNB_MARKET_PARAMS.loanToken,
+                        MXNB_MARKET_PARAMS.collateralToken,
+                        MXNB_MARKET_PARAMS.oracle,
+                        MXNB_MARKET_PARAMS.irm,
+                        MXNB_MARKET_PARAMS.lltv
+                    ]
                 )
             );
             const position = await morpho.position(marketId, userAddress);
@@ -409,135 +349,116 @@ export const useMorphoLoan = () => {
 
             if (borrowShares <= 0n) throw new Error("No debt to repay.");
 
-            // 1: Approve MXNB
-            console.log("Step 1: Checking MXNB Allowance");
+            // 0. Calculate Subsidy via API
+            setStep(12);
+            const subsidyRes = await fetch("/api/get-interest-subsidy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ walletId, userAddress }),
+            });
+            const subsidyData = await subsidyRes.json();
+            if (!subsidyRes.ok || subsidyData.error) throw new Error(subsidyData.error || "Failed to calc subsidy");
+
+            const estimatedSubsidyUSDC = subsidyData.subsidyInUSDC;
+            const estimatedSubsidyMXNB = subsidyData.subsidyInMXNE || "0";
+            console.log(`User Subsidy: ${estimatedSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB)`);
+
+            // 1. Repay Debt via API 
+            setStep(11);
+            console.log("Step 1 & 2: Repaying Debt via API");
             const initialMxnbBalance = await mxnb.balanceOf(userAddress);
             if (initialMxnbBalance === 0n) throw new Error("No MXNB balance to repay.");
             setTotalRepaidAmount(ethers.formatUnits(initialMxnbBalance, MXNB_DECIMALS));
 
-            const mxnbAllowance = await mxnb.allowance(userAddress, CONTRACT_ADDRESSES.morphoBlue);
-            if (mxnbAllowance < initialMxnbBalance) {
-                const tx1 = await mxnb.approve(CONTRACT_ADDRESSES.morphoBlue, ethers.MaxUint256, { gasLimit: MANUAL_GAS_LIMIT });
-                setTxHash(tx1.hash);
-                await tx1.wait();
-                await waitForAllowance(mxnb, userAddress, CONTRACT_ADDRESSES.morphoBlue, initialMxnbBalance);
-            }
+            const repayRes = await fetch('/api/repay', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ walletId, userAddress, borrowShares: borrowShares.toString() })
+            });
+            const repayData = await repayRes.json();
+            if (!repayRes.ok || repayData.error) throw new Error(repayData.error || "Repayment failed");
+            setTxHash(repayData.repayHash);
 
-            // 2a: Calculate MXNB APR for subsidy
-            const initialRawSubsidyUSDC = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
-            //const initialRawSubsidyMXNB = await waUSDC.userInterestInMxnb(userAddress);
-            console.log(`Calculating subsidy in MXNB (${borrowShares.toString()} shares) with Initial Subsidy: ${initialRawSubsidyUSDC} WaUSDC`);
-
-            // Call getInterestSubsidy() as a state-modifying transaction
-            setStep(11.5);
-            console.log("Step 2a: Computing interest subsidy...");
-            let newReservedSubsidy = 0n;
-            try {
-                const tx = await waUSDC.getInterestSubsidy(userAddress, { gasLimit: MANUAL_GAS_LIMIT });
-                setTxHash(tx.hash);
-                const receipt = await tx.wait();
-                console.log(`✓ getInterestSubsidy transaction confirmed at block ${receipt?.blockNumber}`);
-
-                // Get the updated subsidy value from contract after transaction is mined
-                newReservedSubsidy = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
-                console.log(`✓ New reserved subsidy: ${newReservedSubsidy.toString()} aUSDC`);
-            } catch (error: any) {
-                //setError("Failed to calculate interest subsidy.");
-                console.warn("getInterestSubsidy error (proceeding with current subsidy):", error);
-                // If the transaction fails (e.g. insufficient yield), we fetch the current subsidy anyway
-                try {
-                    newReservedSubsidy = await waUSDC.userInterestSubsidyInWaUSDC(userAddress);
-                } catch (e) {
-                    console.error("Failed to fetch fallback subsidy:", e);
-                }
-            }
-
-            const rawEstimatedSubsidyUSDC = newReservedSubsidy;
-            const rawEstimatedSubsidyMXNB = await waUSDC.userInterestInMXNB(userAddress);
-            const estimatedSubsidyUSDC = ethers.formatUnits(rawEstimatedSubsidyUSDC, 6);
-            const estimatedSubsidyMXNB = ethers.formatUnits(rawEstimatedSubsidyMXNB, 6);
-            console.log(`User Raw Subsidy: ${rawEstimatedSubsidyUSDC} USDC (${rawEstimatedSubsidyMXNB} MXNB)`);
-            console.log(`User Subsidy: ${estimatedSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB)`);
-
-            // 2b: Repay Debt
             setStep(12);
-            console.log("Step 2: Repaying Debt");
-            const tx2 = await morpho.repay(MXNB_MARKET_PARAMS_ARRAY, 0, borrowShares, userAddress, "0x", { gasLimit: MANUAL_GAS_LIMIT });
-            setTxHash(tx2.hash);
-            await tx2.wait();
+            await new Promise(r => setTimeout(r, 2000));
 
-            // 3: Withdraw Collateral
+            // 2. Withdraw Collateral via API
             setStep(13);
-            console.log("Step 3: Withdrawing Collateral");
+            console.log("Step 3: Withdrawing Collateral via API");
             const updatedPosition = await morpho.position(marketId, userAddress);
             const collateralShares = updatedPosition[2];
 
-            const initialWaUsdcBalance = await waUSDC.balanceOf(userAddress);
-
             if (collateralShares > 0n) {
-                const tx3 = await morpho.withdrawCollateral(MXNB_MARKET_PARAMS_ARRAY, collateralShares, userAddress, userAddress, { gasLimit: MANUAL_GAS_LIMIT });
-                setTxHash(tx3.hash);
-                await tx3.wait();
-                await waitForBalanceIncrease(waUSDC, userAddress, initialWaUsdcBalance);
+                const withdrawRes = await fetch('/api/withdraw-collateral', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletId, userAddress, collateralAmount: collateralShares.toString() })
+                });
+                const withdrawData = await withdrawRes.json();
+                if (!withdrawRes.ok || withdrawData.error) throw new Error(withdrawData.error || "Withdraw collateral failed");
+                setTxHash(withdrawData.withdrawHash);
             }
 
-            // 4: Unwrap waUSDC -> aUSDC
+            // 3. Unwrap waUSDC -> mUSDC via API
             setStep(14);
-            console.log("Step 4: Unwrap waUSDC to aUSDC");
+            console.log("Step 4: Unwrap waUSDC to mUSDC via API");
 
-            const wMusdcBalance = await waUSDC.balanceOf(userAddress);
-            const initialAUsdcBalance = await aUSDC.balanceOf(userAddress);
+            const initialMUsdcBalance = await mUSDCContract.balanceOf(userAddress);
+            const unwrapRes = await fetch('/api/unwrap', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ walletId, userAddress }) // No wmusdc amount needed
+            });
+            const unwrapData = await unwrapRes.json();
+            if (!unwrapRes.ok || unwrapData.error) throw new Error(unwrapData.error || "Unwrap waUSDC failed");
+            setTxHash(unwrapData.unwrapHash);
 
-            if (wMusdcBalance > 0n) {
-                //const tx4 = await waUSDC.redeem(wMusdcBalance, userAddress, userAddress, { gasLimit: MANUAL_GAS_LIMIT });
-                const tx4 = await waUSDC.redeemWithInterestSubsidy(wMusdcBalance, userAddress, userAddress, { gasLimit: MANUAL_GAS_LIMIT });
-                setTxHash(tx4.hash);
-                await tx4.wait();
-                await waitForBalanceIncrease(aUSDC, userAddress, initialAUsdcBalance);
-            }
-
-            // 5: Withdraw aUSDC from Aave
             setStep(15);
-            console.log("Step 5: Withdraw aUSDC from Aave");
-            const aUsdcBalance = await aUSDC.balanceOf(userAddress);
-            if (aUsdcBalance > 0n) {
-                const tx5 = await aavePool.withdraw(CONTRACT_ADDRESSES.usdc, aUsdcBalance, userAddress, { gasLimit: MANUAL_GAS_LIMIT });
-                setTxHash(tx5.hash);
-                await tx5.wait();
+            // 4. Wait for mUSDC balance + Withdraw Vault (mUSDC -> USDC) via API
+            console.log("Step 5: Withdraw USDC from Vault via API");
+            const musdcBal = await waitForBalanceIncrease(mUSDCContract, userAddress, initialMUsdcBalance);
+
+            if (musdcBal > 0n) {
+                const redeemRes = await fetch("/api/withdraw-vault", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ walletId, userAddress, musdcShares: musdcBal.toString() })
+                });
+                const redeemData = await redeemRes.json();
+                if (!redeemRes.ok || redeemData.error) throw new Error(redeemData.error || "Withdraw vault failed");
+                setTxHash(redeemData.redeemHash);
             }
 
             setStep(16); // Complete Repay Flow and Display subsidy
-            const rawPaidSubsidyUSDC = await waUSDC.userPaidSubsidyInUSDC(userAddress);
-            const paidSubsidyUSDC = ethers.formatUnits(rawPaidSubsidyUSDC, 6);
-            console.log(`Paid raw Subsidy: ${rawPaidSubsidyUSDC} USDC (${rawEstimatedSubsidyMXNB} MXNB, ${rawEstimatedSubsidyUSDC} USDC)`);
-            console.log(`Paid Subsidy: ${paidSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB, ${estimatedSubsidyUSDC} USDC)`);
-            if (parseFloat(paidSubsidyUSDC || "0") > 0) {
-                setUserPaidSubsidyInUSDC(paidSubsidyUSDC);
-                setUserInterestInMxnb(estimatedSubsidyMXNB);
-                setUserInterestInUSDC(estimatedSubsidyUSDC);
-            } /*else {
-                const subsidyMXNE = parseFloat(estimatedSubsidyMXNB || "0");
-                let paidUSDC = subsidyMXNE / 17.6;
-                setUserPaidSubsidyInUSDC(paidUSDC.toFixed(7));
-                setUserInterestInMxnb(estimatedSubsidyMXNB);
-                setUserInterestInUSDC(paidUSDC.toFixed(7));
-            }*/
+
+            try {
+                const waUSDCContract = new ethers.Contract(CONTRACT_ADDRESSES.waUSDC, VAULT_ABI, provider);
+                const rawPaidSubsidyUSDC = await waUSDCContract.userPaidSubsidyInUSDC(userAddress);
+                const paidSubsidyUSDC = ethers.formatUnits(rawPaidSubsidyUSDC, 6);
+
+                if (parseFloat(paidSubsidyUSDC || "0") > 0) {
+                    setUserPaidSubsidyInUSDC(paidSubsidyUSDC);
+                    setUserInterestInMxnb(estimatedSubsidyMXNB);
+                    setUserInterestInUSDC(estimatedSubsidyUSDC);
+                } else {
+                    const oracle = new ethers.Contract(MXNB_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], provider);
+                    const subsidyMXNBNum = parseFloat(subsidyData.rawSubsidyMXNE || "0");
+                    const oraclePriceVal = await oracle.price();
+                    let paidUSDC = subsidyMXNBNum * Number(10n ** 36n) / Number(oraclePriceVal);
+                    setUserInterestInMxnb(estimatedSubsidyMXNB);
+                    setUserInterestInUSDC(ethers.formatUnits(parseInt("" + paidUSDC), 18));
+                }
+            } catch (err) {
+                console.log("Could not fetch subsidy details at end, passing", err);
+            }
 
             await refreshData();
             setLoading(false);
 
         } catch (err: any) {
             console.error("Repay Error:", err);
-            let msg = err.message;
-            console.log({
-                reason: err.reason,
-                message: err.message
-            });
+            let msg = err.reason || err.message || "Transaction failed";
             if (msg.includes("rejected")) msg = "You rejected the transaction";
-            if (msg.includes("estimateGas")) msg = "Gas error.";
-            if (msg.includes("allowance")) msg = "Approval failed.";
-            if (msg.includes("collateral")) msg = "Insufficient collateral.";
-            if (msg.includes("transaction execution reverted")) msg = "The transaction was reverted, due to insufficient collateral. Please try again.";
             else msg = "Transaction failed. Please try again.";
             setError(msg);
         } finally {
@@ -552,6 +473,8 @@ export const useMorphoLoan = () => {
         setError(null);
         setTxHash(null);
         setLoading(false);
+        setUserPaidSubsidyInUSDC("0");
+        setUserInterestInMxnb("0");
     };
 
     return {
