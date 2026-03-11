@@ -15,28 +15,11 @@ const wmUsdcAbi = [
   {
     inputs: [
       {
-        name: "user",
-        type: "address"
-      }
-    ],
-    name: "getInterestSubsidy",
-    outputs: [
-      {
-        name: "subsidy",
-        type: "uint256"
-      }
-    ],
-    stateMutability: "nonpayable",
-    type: "function"
-  },
-  {
-    inputs: [
-      {
         name: "",
         type: "address"
       }
     ],
-    name: "userInterestSubsidyInWmUSDC",
+    name: "userInterestSubsidyInWaUSDC",
     outputs: [
       {
         name: "",
@@ -53,7 +36,7 @@ const wmUsdcAbi = [
         type: "address"
       }
     ],
-    name: "userInterestInMxne",
+    name: "userInterestInMXNB",
     outputs: [
       {
         name: "",
@@ -73,72 +56,39 @@ export async function POST(req: Request) {
 
     const addr = getAddress(userAddress.toLowerCase()) as `0x${string}`;
 
-    // Get initial subsidy balance
-    const initialRawSubsidyUSDC = await publicClient.readContract({
+    // Get current subsidy balance in WaUSDC
+    const finalSubsidyUSDC = await publicClient.readContract({
       address: WM_USDC as `0x${string}`,
       abi: wmUsdcAbi,
-      functionName: "userInterestSubsidyInWmUSDC",
+      functionName: "userInterestSubsidyInWaUSDC",
       args: [addr],
     });
 
-    console.log(`Calculating subsidy with initial value: ${initialRawSubsidyUSDC.toString()} WmUSDC...`);
-
-    // Call getInterestSubsidy to trigger subsidy calculation
-    const userInterestSubsidyInWmUSDC = await publicClient.readContract({
-      address: WM_USDC as `0x${string}`,
-      abi: wmUsdcAbi as any,
-      functionName: "getInterestSubsidy",
-      args: [addr],
-    });
-
-    console.log('✓ Interest confirmed:', userInterestSubsidyInWmUSDC);
-
-    // Poll for subsidy update
-    let retries = 0;
-    let finalSubsidyUSDC = initialRawSubsidyUSDC;
-
-    while (retries < 15) {
-      const currentBalance = await publicClient.readContract({
-        address: WM_USDC as `0x${string}`,
-        abi: wmUsdcAbi,
-        functionName: "userInterestSubsidyInWmUSDC",
-        args: [addr],
-      });
-
-      if (currentBalance > initialRawSubsidyUSDC) {
-        finalSubsidyUSDC = currentBalance;
-        break;
-      }
-
-      console.log(`Waiting for subsidy update... Attempt ${retries + 1}/15`);
-      await new Promise((r) => setTimeout(r, 2500));
-      retries++;
-    }
-
-    // Get subsidy in MXNE
-    const rawSubsidyMXNE = await publicClient.readContract({
+    // Get current subsidy in MXNB
+    const rawSubsidyMXNB = await publicClient.readContract({
       address: WM_USDC as `0x${string}`,
       abi: wmUsdcAbi,
-      functionName: "userInterestInMxne",
+      functionName: "userInterestInMXNB",
       args: [addr],
     });
 
-    console.log("Raw Final subsidy:", { finalSubsidyUSDC, rawSubsidyMXNE });
+    console.log("Raw Final subsidy:", { finalSubsidyUSDC, rawSubsidyMXNB });
 
-    const subsidyInUSDC = ethers.formatUnits(finalSubsidyUSDC, 18);
-    const subsidyInMXNE = ethers.formatUnits(rawSubsidyMXNE, 6);
+    const subsidyInUSDC = ethers.formatUnits(finalSubsidyUSDC, 6); // WaUSDC has 6 decimals
+    const subsidyInMXNE = ethers.formatUnits(rawSubsidyMXNB, 6);
 
-    console.log("Final subsidy:", { subsidyInUSDC, subsidyInMXNE });
+    console.log("Final formated subsidy:", { subsidyInUSDC, subsidyInMXNE });
 
     return NextResponse.json({
       success: true,
       subsidyInUSDC,
       subsidyInMXNE,
       rawSubsidyUSDC: finalSubsidyUSDC.toString(),
-      rawSubsidyMXNE: rawSubsidyMXNE.toString()
+      rawSubsidyMXNE: rawSubsidyMXNB.toString()
     });
   } catch (e: any) {
     console.error("GET INTEREST SUBSIDY ERROR:", e);
     return NextResponse.json({ error: e?.message ?? "Error" }, { status: 500 });
   }
 }
+

@@ -31,6 +31,16 @@ const erc20Abi = [
     ],
     outputs: [{ name: "", type: "bool" }],
   },
+  {
+    name: "allowance",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
 ] as const;
 
 const morphoAbi = [
@@ -71,7 +81,7 @@ const wmUsdcAbi = [
     outputs: [{ name: "", type: "uint256" }],
   },
   {
-    name: "userInterestSubsidyInWmUSDC",
+    name: "userInterestSubsidyInWaUSDC",
     type: "function",
     stateMutability: "view",
     inputs: [{ name: "user", type: "address" }],
@@ -90,11 +100,11 @@ export async function POST(req: Request) {
     console.log("--- REPAY ---", { walletId, addr, shares: shares.toString() });
 
     // Step 0: Call getInterestSubsidy BEFORE repay — this is required for redeemWithInterestSubsidy to work
-    // It sets userInterestSubsidyInWmUSDC[user] and userDepositedShares on chain
+    // It sets userInterestSubsidyInWaUSDC[user] and userDepositedShares on chain
     const initialSubsidy = await publicClient.readContract({
       address: WM_USDC as `0x${string}`,
       abi: wmUsdcAbi,
-      functionName: "userInterestSubsidyInWmUSDC",
+      functionName: "userInterestSubsidyInWaUSDC",
       args: [addr],
     });
     console.log("Initial subsidy:", initialSubsidy.toString());
@@ -114,43 +124,62 @@ export async function POST(req: Request) {
     });
     console.log("getInterestSubsidy hash:", subsidyTx.hash);
 
-    // Wait for subsidy to index on chain
-    let retries = 0;
-    while (retries < 10) {
-      const currentSubsidy = await publicClient.readContract({
-        address: WM_USDC as `0x${string}`,
-        abi: wmUsdcAbi,
-        functionName: "userInterestSubsidyInWmUSDC",
-        args: [addr],
-      });
-      console.log(`Subsidy attempt ${retries + 1}:`, currentSubsidy.toString());
-      if (currentSubsidy > initialSubsidy) break;
-      await new Promise((r) => setTimeout(r, 2500));
-      retries++;
-    }
-
-    // Step 1: Approve MXNE → Morpho Blue (maxUint256)
-    const approveData = encodeFunctionData({
-      abi: erc20Abi,
-      functionName: "approve",
-      args: [
-        MORPHO_BLUE as `0x${string}`,
-        BigInt(
-          "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        ),
-      ],
-    });
-    const approveTx = await privyRpc(walletId, "eip155:84532", {
-      to: MXNE,
-      data: approveData,
-      chain_id: 84532,
-    });
-    await publicClient.waitForTransactionReceipt({
-      hash: approveTx.hash as `0x${string}`,
-    });
-    console.log("Repay approve hash:", approveTx.hash);
-
+    // Wait for subsidy to transaction to finish, removing the loop since it locks if no diff.
+    console.log("Esperando propagación del subsidy...");
     await new Promise((r) => setTimeout(r, 3000));
+
+    // Step 1: Approve MXNE → Morpho Blue
+    const currentAllowance = await publicClient.readContract({
+      address: MXNE,
+      abi: erc20Abi,
+      functionName: "allowance",
+      args: [addr, MORPHO_BLUE as `0x${string}`],
+    });
+
+    if (currentAllowance >= shares) {
+      console.log("Allowance already sufficient. Skipping approve step.");
+    } else {
+      console.log("Allowance insufficient. Approving MXNB maxUint256...");
+      const approveData = encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [
+          MORPHO_BLUE as `0x${string}`,
+          BigInt(
+            "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          ),
+        ],
+      });
+      const approveTx = await privyRpc(walletId, "eip155:84532", {
+        to: MXNE,
+        data: approveData,
+        chain_id: 84532,
+      });
+      await publicClient.waitForTransactionReceipt({
+        hash: approveTx.hash as `0x${string}`,
+      });
+      console.log("Repay approve hash:", approveTx.hash);
+
+      console.log("Esperando propagación del allowance (Polling)...");
+      let allowanceRetries = 0;
+      while (allowanceRetries < 10) {
+        const newAllowance = await publicClient.readContract({
+          address: MXNE,
+          abi: erc20Abi,
+          functionName: "allowance",
+          args: [addr, MORPHO_BLUE as `0x${string}`],
+        });
+        if (newAllowance > 0n) {
+          console.log(`Allowance detectado: ${newAllowance.toString()}`);
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+        allowanceRetries++;
+      }
+
+      console.log("Iniciando Grace Period antes de REPAY...");
+      await new Promise((r) => setTimeout(r, 4000));
+    }
 
     // Step 2: Repay with exact borrowShares (assets=0 closes position without dust)
     const repayData = encodeFunctionData({

@@ -226,12 +226,12 @@ export const useMorphoLoan = () => {
             const depositAmountBN = numerator / denominator;
             const amountStr = ethers.formatUnits(depositAmountBN, USDC_DECIMALS);
 
-            // 1. Lend USDC -> mUSDC (also handles approve)
+            // 1. Lend USDC -> aUSDC (also handles approve)
             setStep(1);
-            console.log("Step 1 & 2: Lending USDC to get mUSDC via API");
+            console.log("Step 1 & 2: Lending USDC to get aUSDC via API");
 
-            const mUSDCContract = new ethers.Contract(CONTRACT_ADDRESSES.morphoUSDCVault, ERC20_ABI, provider);
-            const initialMUsdcBalance = await mUSDCContract.balanceOf(userAddress);
+            const aUSDCContract = new ethers.Contract(CONTRACT_ADDRESSES.aUSDC, ERC20_ABI, provider);
+            const initialAUsdcBalance = await aUSDCContract.balanceOf(userAddress);
 
             const lendRes = await fetch("/api/lend", {
                 method: "POST",
@@ -243,11 +243,14 @@ export const useMorphoLoan = () => {
             setTxHash(lendData.depositHash);
 
             setStep(2);
-            const musdcBalance = await waitForBalanceIncrease(mUSDCContract, userAddress, initialMUsdcBalance);
+            await waitForBalanceIncrease(aUSDCContract, userAddress, initialAUsdcBalance);
 
-            // 2. Wrap mUSDC -> waUSDC (also handles approve)
+            // Retraso de 2s para dar margen a los indexadores antes de Wrap
+            await new Promise(r => setTimeout(r, 2000));
+
+            // 2. Wrap aUSDC -> waUSDC (also handles approve)
             setStep(3);
-            console.log("Step 3 & 4: Wrapping mUSDC to waUSDC via API");
+            console.log("Step 3 & 4: Wrapping aUSDC to waUSDC via API");
 
             const waUSDC = new ethers.Contract(CONTRACT_ADDRESSES.waUSDC, VAULT_ABI, provider);
             const initialWaUsdcBalance = await waUSDC.balanceOf(userAddress);
@@ -255,7 +258,7 @@ export const useMorphoLoan = () => {
             const wrapRes = await fetch("/api/wrap", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ walletId, userAddress, musdcAmount: musdcBalance.toString() }),
+                body: JSON.stringify({ walletId, userAddress }),
             });
             const wrapData = await wrapRes.json();
             if (!wrapRes.ok || wrapData.error) throw new Error(wrapData.error || "Wrap failed");
@@ -399,11 +402,12 @@ export const useMorphoLoan = () => {
                 setTxHash(withdrawData.withdrawHash);
             }
 
-            // 3. Unwrap waUSDC -> mUSDC via API
+            // 3. Unwrap waUSDC -> aUSDC via API
             setStep(14);
-            console.log("Step 4: Unwrap waUSDC to mUSDC via API");
+            console.log("Step 4: Unwrap waUSDC to aUSDC via API");
 
-            const initialMUsdcBalance = await mUSDCContract.balanceOf(userAddress);
+            const aUSDCContract = new ethers.Contract(CONTRACT_ADDRESSES.aUSDC, ERC20_ABI, provider);
+            const initialAUsdcBalance = await aUSDCContract.balanceOf(userAddress);
             const unwrapRes = await fetch('/api/unwrap', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -414,19 +418,19 @@ export const useMorphoLoan = () => {
             setTxHash(unwrapData.unwrapHash);
 
             setStep(15);
-            // 4. Wait for mUSDC balance + Withdraw Vault (mUSDC -> USDC) via API
-            console.log("Step 5: Withdraw USDC from Vault via API");
-            const musdcBal = await waitForBalanceIncrease(mUSDCContract, userAddress, initialMUsdcBalance);
+            // 4. Wait for aUSDC balance + Withdraw from Aave (aUSDC -> USDC) via API
+            console.log("Step 5: Withdraw USDC from Aave via API");
+            const aUsdcBal = await waitForBalanceIncrease(aUSDCContract, userAddress, initialAUsdcBalance);
 
-            if (musdcBal > 0n) {
-                const redeemRes = await fetch("/api/withdraw-vault", {
+            if (aUsdcBal > 0n) {
+                const redeemRes = await fetch("/api/withdraw-aave", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ walletId, userAddress, musdcShares: musdcBal.toString() })
+                    body: JSON.stringify({ walletId, userAddress, aUsdcAmount: aUsdcBal.toString() })
                 });
                 const redeemData = await redeemRes.json();
-                if (!redeemRes.ok || redeemData.error) throw new Error(redeemData.error || "Withdraw vault failed");
-                setTxHash(redeemData.redeemHash);
+                if (!redeemRes.ok || redeemData.error) throw new Error(redeemData.error || "Withdraw Aave failed");
+                setTxHash(redeemData.withdrawHash || redeemData.redeemHash);
             }
 
             setStep(16); // Complete Repay Flow and Display subsidy
@@ -442,11 +446,11 @@ export const useMorphoLoan = () => {
                     setUserInterestInUSDC(estimatedSubsidyUSDC);
                 } else {
                     const oracle = new ethers.Contract(MXNB_MARKET_PARAMS.oracle, ["function price() external view returns (uint256)"], provider);
-                    const subsidyMXNBNum = parseFloat(subsidyData.rawSubsidyMXNE || "0");
+                    const rawSubsidyMXNB = BigInt(subsidyData.rawSubsidyMXNE || "0");
                     const oraclePriceVal = await oracle.price();
-                    let paidUSDC = subsidyMXNBNum * Number(10n ** 36n) / Number(oraclePriceVal);
+                    let paidUSDC = (rawSubsidyMXNB * (10n ** 36n)) / oraclePriceVal;
                     setUserInterestInMxnb(estimatedSubsidyMXNB);
-                    setUserInterestInUSDC(ethers.formatUnits(parseInt("" + paidUSDC), 18));
+                    setUserInterestInUSDC(ethers.formatUnits(paidUSDC, 18));
                 }
             } catch (err) {
                 console.log("Could not fetch subsidy details at end, passing", err);

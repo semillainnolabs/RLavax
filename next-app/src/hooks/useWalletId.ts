@@ -1,4 +1,3 @@
-// src/hooks/useWalletId.ts
 import { useState, useEffect } from "react";
 import { useWallets } from "@privy-io/react-auth";
 
@@ -8,9 +7,6 @@ export const useWalletId = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Solo ejecutamos si hay al menos una billetera
-    if (wallets.length === 0) return;
-
     const fetchWalletId = async () => {
       const address = wallets[0]?.address;
       if (!address) return;
@@ -23,9 +19,7 @@ export const useWalletId = () => {
           body: JSON.stringify({ userAddress: address }),
         });
         const data = await res.json();
-        if (res.ok && data.walletId) {
-          setWalletId(data.walletId);
-        }
+        if (res.ok && data.walletId) setWalletId(data.walletId);
       } catch (err) {
         console.error("Error fetching walletId:", err);
       } finally {
@@ -33,7 +27,7 @@ export const useWalletId = () => {
       }
     };
     fetchWalletId();
-  }, [wallets]); // Esto re-ejecutará cuando la lista de billeteras cambie
+  }, [wallets]);
 
   return { walletId, loading };
 };

@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     });
 
     // getInterestSubsidy was already called in /api/repay before the repay tx
-    // so userInterestSubsidyInWmUSDC and userDepositedShares are correctly set on chain
+    // so userInterestSubsidyInWaUSDC and userDepositedShares are correctly set on chain
     const redeemData = encodeFunctionData({
       abi: wmUsdcAbi,
       functionName: "redeemWithInterestSubsidy",
