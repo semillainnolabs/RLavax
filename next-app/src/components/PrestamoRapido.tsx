@@ -54,6 +54,7 @@ export default function PrestamoRapido() {
     // Derived state for validation
     const isExceedingLiquidity = Boolean(borrowAmount) && parseFloat(borrowAmount) > parseFloat(marketLiquidity);
     const isInsufficientBalance = parseFloat(usdcBalance) < parseFloat(requiredDeposit || "0");
+    const isInsufficientBalanceWithdraw = parseFloat(mxnbBalance) <= parseFloat(borrowBalance || "0");
 
     return (
         <div className="w-full max-w-md mx-auto p-1">
@@ -293,8 +294,9 @@ export default function PrestamoRapido() {
                                             onClick={executeRepayAndWithdraw}
                                             isWithdraw
                                             className="mt-4"
+                                            disabled={isInsufficientBalanceWithdraw}
                                         >
-                                            Pay All and Withdraw
+                                            {isInsufficientBalanceWithdraw ? "Insufficient Balance to pay debt" : "Pay All and Withdraw"}
                                         </Button>
                                     )}
                                 </div>

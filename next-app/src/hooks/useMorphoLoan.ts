@@ -298,6 +298,8 @@ export const useMorphoLoan = () => {
             setTxHash(borrowData.borrowHash);
 
             setStep(8); // Complete
+            // Delay de sincronización para que el RPC indexe los nuevos balances antes de refrescar la UI
+            await new Promise(r => setTimeout(r, 3000));
             await refreshData();
             setLoading(false);
 
@@ -353,7 +355,6 @@ export const useMorphoLoan = () => {
             if (borrowShares <= 0n) throw new Error("No debt to repay.");
 
             // 0. Calculate Subsidy via API
-            setStep(12);
             const subsidyRes = await fetch("/api/get-interest-subsidy", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -367,7 +368,7 @@ export const useMorphoLoan = () => {
             console.log(`User Subsidy: ${estimatedSubsidyUSDC} USDC (${estimatedSubsidyMXNB} MXNB)`);
 
             // 1. Repay Debt via API 
-            setStep(11);
+            setStep(12);
             console.log("Step 1 & 2: Repaying Debt via API");
             const initialMxnbBalance = await mxnb.balanceOf(userAddress);
             if (initialMxnbBalance === 0n) throw new Error("No MXNB balance to repay.");
@@ -382,7 +383,6 @@ export const useMorphoLoan = () => {
             if (!repayRes.ok || repayData.error) throw new Error(repayData.error || "Repayment failed");
             setTxHash(repayData.repayHash);
 
-            setStep(12);
             await new Promise(r => setTimeout(r, 2000));
 
             // 2. Withdraw Collateral via API
@@ -456,6 +456,8 @@ export const useMorphoLoan = () => {
                 console.log("Could not fetch subsidy details at end, passing", err);
             }
 
+            // Delay de sincronización para que el RPC indexe los nuevos balances antes de refrescar la UI
+            await new Promise(r => setTimeout(r, 3000));
             await refreshData();
             setLoading(false);
 
