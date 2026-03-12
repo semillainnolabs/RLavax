@@ -28,8 +28,10 @@ export const useMorphoLoan = () => {
     const [txHash, setTxHash] = useState<string | null>(null);
     const [usdcBalance, setUsdcBalance] = useState<string>("0.00");
     const [mxnbBalance, setMxnbBalance] = useState<string>("0.00");
+    const [rawMxnbBalance, setRawMxnbBalance] = useState<number>(0);
     const [collateralBalance, setCollateralBalance] = useState<string>("0.00");
     const [borrowBalance, setBorrowBalance] = useState<string>("0.00");
+    const [rawBorrowBalance, setRawBorrowBalance] = useState<number>(0);
     const [marketLiquidity, setMarketLiquidity] = useState<string>("0");
     const [marketAPR, setMarketAPR] = useState<number>(0);
     const [totalRepaidAmount, setTotalRepaidAmount] = useState<string | null>(null);
@@ -109,6 +111,7 @@ export const useMorphoLoan = () => {
             const mxnbContract = new ethers.Contract(CONTRACT_ADDRESSES.mockMXNB, ERC20_ABI, provider);
             const targetBalance = await mxnbContract.balanceOf(userAddress);
             setMxnbBalance(formatBalance(targetBalance, MXNB_DECIMALS));
+            setRawMxnbBalance(Number(targetBalance));
 
             const marketId = ethers.keccak256(
                 ethers.AbiCoder.defaultAbiCoder().encode(
@@ -132,6 +135,9 @@ export const useMorphoLoan = () => {
 
             // Borrow shares -> debt (Simplification for UI)
             setBorrowBalance(formatBalance(position[1], 12));
+            setRawBorrowBalance(Number(formatBalance(position[1], 6)));
+            //console.log("raw borrowBalance:",position[1], " raw mxnbbal:", targetBalance);
+            //console.log("raw borrowBalance Numbered:",Number(formatBalance(position[1], 6)), " raw mxnbbal:", Number(targetBalance));
             setCollateralBalance(formatBalance(position[2], 6)); // waUSDC is 6 decimals
 
             const safeLiquidity = liquidityAssets > 0n ? liquidityAssets : 0n;
@@ -490,8 +496,10 @@ export const useMorphoLoan = () => {
         txHash,
         usdcBalance,
         mxnbBalance,
+        rawMxnbBalance,
         collateralBalance,
         borrowBalance,
+        rawBorrowBalance,
         marketLiquidity,
         marketAPR: (marketAPR * 100).toFixed(2),
         totalRepaidAmount,

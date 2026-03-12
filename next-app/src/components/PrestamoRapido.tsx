@@ -10,7 +10,7 @@ import Input from "./Input";
 
 export default function PrestamoRapido() {
     const { authenticated, login } = usePrivy();
-    const { loading, step, error, txHash, usdcBalance, mxnbBalance, collateralBalance, borrowBalance, marketLiquidity, marketAPR, totalRepaidAmount, userPaidSubsidyInUSDC, userInterestInMxnb, userInterestInUSDC, executeZale, executeRepayAndWithdraw, getSimulatedDeposit, resetState } = useMorphoLoan();
+    const { loading, step, error, txHash, usdcBalance, mxnbBalance , rawMxnbBalance, collateralBalance, borrowBalance, rawBorrowBalance, marketLiquidity, marketAPR, totalRepaidAmount, userPaidSubsidyInUSDC, userInterestInMxnb, userInterestInUSDC, executeZale, executeRepayAndWithdraw, getSimulatedDeposit, resetState } = useMorphoLoan();
 
     const [borrowAmount, setBorrowAmount] = useState("");
     const [requiredDeposit, setRequiredDeposit] = useState("0.00");
@@ -54,7 +54,7 @@ export default function PrestamoRapido() {
     // Derived state for validation
     const isExceedingLiquidity = Boolean(borrowAmount) && parseFloat(borrowAmount) > parseFloat(marketLiquidity);
     const isInsufficientBalance = parseFloat(usdcBalance) < parseFloat(requiredDeposit || "0");
-    const isInsufficientBalanceWithdraw = parseFloat(mxnbBalance) <= parseFloat(borrowBalance || "0");
+    const isInsufficientBalanceWithdraw = rawMxnbBalance <= rawBorrowBalance;
 
     return (
         <div className="w-full max-w-md mx-auto p-1">
