@@ -61,6 +61,19 @@ export function SendModal({ isOpen, onClose, currency, balance, onSuccess }: Sen
     const [amount, setAmount] = useState("");
     const [address, setAddress] = useState("");
     const { execute, isLoading, error, txHash, resetState } = useTokenTransfer();
+    const [displayError, setDisplayError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (error) {
+            setDisplayError(error);
+            const timer = setTimeout(() => {
+                setDisplayError(null);
+            }, 3000);
+            return () => clearTimeout(timer);
+        } else {
+            setDisplayError(null);
+        }
+    }, [error]);
 
     const isExceedingBalance = amount ? parseFloat(amount) > parseFloat(balance || "0") : false;
     const isValid = amount && parseFloat(amount) > 0 && !isExceedingBalance && address.trim().length > 0;
@@ -149,9 +162,10 @@ export function SendModal({ isOpen, onClose, currency, balance, onSuccess }: Sen
                         disabled={isLoading}
                     />
                 </div>
-                {error && (
-                    <div className="p-3 bg-red-900/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
-                        {error}
+                {displayError && (
+                    <div className="p-4 text-center rounded-xl bg-[#0a0a0a] border border-red-500 text-red-500">
+                        <p className="font-bold text-center text-md mb-1"> An error occurred</p>
+                        {displayError}
                     </div>
                 )}
                 <Button disabled={!isValid || isLoading} onClick={handleSend} className="w-full">

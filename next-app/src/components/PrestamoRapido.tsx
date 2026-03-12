@@ -10,7 +10,7 @@ import Input from "./Input";
 
 export default function PrestamoRapido() {
     const { authenticated, login } = usePrivy();
-    const { loading, step, error, txHash, usdcBalance, mxnbBalance , rawMxnbBalance, collateralBalance, borrowBalance, rawBorrowBalance, marketLiquidity, marketAPR, totalRepaidAmount, userPaidSubsidyInUSDC, userInterestInMxnb, userInterestInUSDC, executeZale, executeRepayAndWithdraw, getSimulatedDeposit, resetState } = useMorphoLoan();
+    const { loading, step, error, txHash, usdcBalance, mxnbBalance, rawMxnbBalance, collateralBalance, borrowBalance, rawBorrowBalance, marketLiquidity, marketAPR, totalRepaidAmount, userPaidSubsidyInUSDC, userInterestInMxnb, userInterestInUSDC, executeZale, executeRepayAndWithdraw, getSimulatedDeposit, resetState } = useMorphoLoan();
 
     const [borrowAmount, setBorrowAmount] = useState("");
     const [requiredDeposit, setRequiredDeposit] = useState("0.00");
@@ -202,12 +202,12 @@ export default function PrestamoRapido() {
                                             <span className="text-gray-200 font-mono">{usdcBalance} USDC</span>
                                         </div>
                                         {/* Validation Errors */}
-                                        {isInsufficientBalance && (
+                                        {isInsufficientBalance && !loading && (
                                             <div className="text-xs text-[#4fe3c3] mt-2 flex items-center gap-1">
                                                 ⚠️ Insufficient balance
                                             </div>
                                         )}
-                                        {isExceedingLiquidity && (
+                                        {isExceedingLiquidity && !loading && (
                                             <div className="text-xs text-[#4fe3c3] mt-2 flex items-center gap-1">
                                                 ⚠️ Insufficient liquidity in market
                                             </div>
@@ -257,8 +257,8 @@ export default function PrestamoRapido() {
 
                                     {/* Error Message */}
                                     {error && (
-                                        <div className="p-4 text-center rounded-xl bg-[#0a0a0a] border border-[#264c73] text-[#4fe3c3] text-sm">
-                                            <p className="font-semibold text-center mb-1">An error occurred while requesting the loan</p>
+                                        <div className="p-4 text-center rounded-xl bg-[#0a0a0a] border border-red-400 text-red-500">
+                                            <p className="font-bold text-md text-center mb-1">An error occurred</p>
                                             {error}
                                         </div>
                                     )}

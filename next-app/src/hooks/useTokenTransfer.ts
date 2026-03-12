@@ -56,10 +56,21 @@ export const useTokenTransfer = () => {
             setIsLoading(false);
         } catch (err: any) {
             console.error("Transfer Error:", err);
+
             let msg = err.reason || err.message || "Transaction failed";
-            if (msg.includes("rejected")) msg = "You rejected the transaction in your wallet.";
-            else if (msg.includes("estimateGas")) msg = "Gas estimation error. Insufficient funds or network issue.";
-            else if (msg.includes("insufficient balance") || msg.toLowerCase().includes("exceeds balance")) msg = "Insufficient balance for transfer.";
+
+            if (msg.includes("insufficient funds for gas")) {
+                msg = "Insufficient funds for gas. Please add ETH to your wallet on Base Sepolia.";
+            }
+            else if (msg.includes("transfer amount exceeds balance")) {
+                msg = "Transfer amount exceeds balance. Please try again.";
+            }
+            else if (msg.includes("reverted")) {
+                msg = "Transaction reverted. Check your inputs and try again.";
+            }
+            else {
+                msg = "Transaction failed. Please try again.";
+            }
             setError(msg);
             setIsLoading(false);
         }

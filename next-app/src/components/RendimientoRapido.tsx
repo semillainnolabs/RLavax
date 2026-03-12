@@ -196,8 +196,8 @@ export default function RendimientoRapido() {
 
                                     {/* Error Message */}
                                     {error && (
-                                        <div className="p-4 text-center rounded-xl bg-[#0a0a0a] border border-[#264c73] text-[#4fe3c3] text-sm">
-                                            <p className="font-semibold text-center mb-1"> An error occurred while depositing </p>
+                                        <div className="p-4 text-center rounded-xl bg-[#0a0a0a] border border-red-500 text-red-500">
+                                            <p className="font-bold text-center text-md mb-1"> An error occurred</p>
                                             {error}
                                         </div>
                                     )}

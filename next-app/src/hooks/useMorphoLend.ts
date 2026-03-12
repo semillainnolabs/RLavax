@@ -249,14 +249,22 @@ export const useMorphoLend = () => {
 
         } catch (err: any) {
             console.error("Deposit Error:", err);
-            let msg = err.reason || err.message || "Deposit failed";
+            let msg = err.reason || err.message || "Transaction failed";
 
-            // User friendly error messages
-            if (msg.includes("rejected")) msg = "You rejected the transaction";
-            else if (msg.includes("insufficient liquidity")) msg = "Insufficient liquidity";
-            else if (msg.includes("exceeds max deposit")) msg = "Exceeds maximum deposit";
-            else msg = "The transaction failed. Please try again.";
+            if (msg.includes("insufficient funds for gas")) {
+                msg = "Insufficient funds for gas. Please add ETH to your wallet on Base Sepolia.";
+            }
+            else if (msg.includes("transfer amount exceeds balance")) {
+                msg = "Transfer amount exceeds balance. Please try again.";
+            }
+            else if (msg.includes("reverted")) {
+                msg = "Transaction reverted. Check your inputs and try again.";
+            }
+            else {
+                msg = "Transaction failed. Please try again.";
+            }
             setError(msg);
+
             setLoading(false);
         }
     };
@@ -318,11 +326,20 @@ export const useMorphoLend = () => {
 
         } catch (err: any) {
             console.error("Withdraw Error:", err);
-            let msg = err.reason || err.message || "Withdraw failed";
-            
-            // User friendly error messages
-            if (msg.includes("rejected")) msg = "You rejected the transaction";
-            else msg = "The transaction failed. Please try again.";
+            let msg = err.reason || err.message || "Transaction failed";
+
+            if (msg.includes("insufficient funds for gas")) {
+                msg = "Insufficient funds for gas. Please add ETH to your wallet on Base Sepolia.";
+            }
+            else if (msg.includes("transfer amount exceeds balance")) {
+                msg = "Transfer amount exceeds balance. Please try again.";
+            }
+            else if (msg.includes("reverted")) {
+                msg = "Transaction reverted. Check your inputs and try again.";
+            }
+            else {
+                msg = "Transaction failed. Please try again.";
+            }
             setError(msg);
             setLoading(false);
         }

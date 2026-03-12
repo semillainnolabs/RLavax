@@ -311,10 +311,23 @@ export const useMorphoLoan = () => {
 
         } catch (err: any) {
             console.error("Zale error:", err);
+
             let msg = err.reason || err.message || "Transaction failed";
-            if (msg.includes("rejected")) msg = "You rejected the transaction";
-            else msg = "Transaction failed. Please try again.";
+
+            if (msg.includes("insufficient funds for gas")) {
+                msg = "Insufficient funds for gas. Please add ETH to your wallet on Base Sepolia.";
+            }
+            else if (msg.includes("transfer amount exceeds balance")) {
+                msg = "Transfer amount exceeds balance. Please try again.";
+            }
+            else if (msg.includes("reverted")) {
+                msg = "Transaction reverted. Check your inputs and try again.";
+            }
+            else {
+                msg = "Transaction failed. Please try again.";
+            }
             setError(msg);
+
         } finally {
             if (step !== 8 && step < 9) {
                 setLoading(false);
@@ -470,9 +483,21 @@ export const useMorphoLoan = () => {
         } catch (err: any) {
             console.error("Repay Error:", err);
             let msg = err.reason || err.message || "Transaction failed";
-            if (msg.includes("rejected")) msg = "You rejected the transaction";
-            else msg = "Transaction failed. Please try again.";
+
+            if (msg.includes("insufficient funds for gas")) {
+                msg = "Insufficient funds for gas. Please add ETH to your wallet on Base Sepolia.";
+            }
+            else if (msg.includes("transfer amount exceeds balance")) {
+                msg = "Transfer amount exceeds balance. Please try again.";
+            }
+            else if (msg.includes("reverted")) {
+                msg = "Transaction reverted. Check your inputs and try again.";
+            }
+            else {
+                msg = "Transaction failed. Please try again.";
+            }
             setError(msg);
+            setLoading(false);
         } finally {
             if (step !== 16 && step >= 11) {
                 setLoading(false);
