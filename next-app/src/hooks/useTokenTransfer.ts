@@ -1,22 +1,13 @@
-import { useState, useCallback } from 'react';
-import { ethers } from 'ethers';
+import { useState } from 'react';
 import { useWallets } from '@privy-io/react-auth';
-import { CONTRACT_ADDRESSES, ERC20_ABI } from '../constants/contracts';
+import { useWalletId } from './useWalletId';
 
 export const useTokenTransfer = () => {
     const { wallets } = useWallets();
+    const { walletId } = useWalletId();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [txHash, setTxHash] = useState<string | null>(null);
-
-    const getSigner = useCallback(async () => {
-        const wallet = wallets[0];
-        if (!wallet) throw new Error("Wallet not connected");
-
-        const provider = await wallet.getEthereumProvider();
-        const ethersProvider = new ethers.BrowserProvider(provider);
-        return ethersProvider.getSigner();
-    }, [wallets]);
 
     const execute = async (currency: "USDC" | "MXNB", amount: string, recipientAddress: string) => {
         setIsLoading(true);
@@ -24,19 +15,43 @@ export const useTokenTransfer = () => {
         setTxHash(null);
 
         try {
-            if (!ethers.isAddress(recipientAddress)) {
+            if (!walletId) {
+                throw new Error("Wallet ID is not loaded yet. Please wait and try again.");
+            }
+
+            const userAddress = wallets[0]?.address;
+            if (!userAddress) {
+                throw new Error("Wallet not connected");
+            }
+
+            if (!/^0x[a-fA-F0-9]{40}$/.test(recipientAddress)) {
                 throw new Error("Invalid recipient address. Please check the address and try again.");
             }
 
-            const signer = await getSigner();
-            const tokenAddress = currency === "USDC" ? CONTRACT_ADDRESSES.usdc : CONTRACT_ADDRESSES.mockMXNB;
-            const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+            const res = await fetch("/api/transfer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    walletId,
+                    userAddress,
+                    currency,
+                    amount,
+                    recipientAddress
+                }),
+            });
 
-            const parsedAmount = ethers.parseUnits(amount, 6); // Both USDC and MXNB have 6 decimals
+            const data = await res.json();
 
-            const tx = await tokenContract.transfer(recipientAddress, parsedAmount);
-            setTxHash(tx.hash);
-            await tx.wait();
+            if (!res.ok || data.error) {
+                throw new Error(data.error || "The transaction failed. Please try again.");
+            }
+
+            if (data.success && data.txHash) {
+                setTxHash(data.txHash);
+            } else if (data.txHash) {
+                // Fallback in case success boolean is not passed but txHash is
+                setTxHash(data.txHash);
+            }
 
             setIsLoading(false);
         } catch (err: any) {
@@ -45,7 +60,6 @@ export const useTokenTransfer = () => {
             if (msg.includes("rejected")) msg = "You rejected the transaction in your wallet.";
             else if (msg.includes("estimateGas")) msg = "Gas estimation error. Insufficient funds or network issue.";
             else if (msg.includes("insufficient balance") || msg.toLowerCase().includes("exceeds balance")) msg = "Insufficient balance for transfer.";
-            else msg = "The transaction failed. Please try again.";
             setError(msg);
             setIsLoading(false);
         }
