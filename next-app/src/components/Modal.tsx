@@ -7,6 +7,8 @@ import Input from "./Input";
 import { usePrivy } from "@privy-io/react-auth";
 import { useTokenTransfer } from "../hooks/useTokenTransfer";
 import Link from "next/link";
+import ErrorDisplay from "./ErrorDisplay";
+import SuccessScreen from "./SuccessScreen";
 
 interface ModalProps {
     isOpen: boolean;
@@ -103,10 +105,11 @@ export function SendModal({ isOpen, onClose, currency, balance, onSuccess }: Sen
     if (txHash && !isLoading) {
         return (
             <Modal isOpen={isOpen} onClose={handleDone} title="Transfer Successful" subtitle="Your funds have been sent">
-                <div className="space-y-6 mt-8">
-                    <div className="flex justify-center mb-2">
-                        <CheckCircleIcon className="w-20 h-20 text-[#4fe3c3]" />
-                    </div>
+                <SuccessScreen
+                    title=""
+                    buttonText="Done"
+                    onButtonClick={handleDone}
+                >
                     <div className="text-center mb-8 space-y-2">
                         <div className="text-5xl border-b-4 w-fit mx-auto border-[#264c73] font-bold text-white">
                             {amount} <span className="text-[#4fe3c3]">{currency}</span>
@@ -116,7 +119,7 @@ export function SendModal({ isOpen, onClose, currency, balance, onSuccess }: Sen
                         </p>
                     </div>
 
-                    <Link href={`https://sepolia.basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className=" border hover:bg-gray-950 transition-colors cursor-pointer border-[#264c73] rounded-xl p-4 flex flex-col items-center gap-2">
+                    <Link href={`https://sepolia.basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className=" border hover:bg-gray-950 transition-colors cursor-pointer border-[#264c73] rounded-xl p-4 flex flex-col items-center gap-2 mb-4">
                         <span className="text-xs text-gray-100 font-bold uppercase tracking-wider">Transaction Hash</span>
                         <p
                             className="text-sm font-mono text-[#4fe3c3] hover:underline break-all text-center"
@@ -124,11 +127,7 @@ export function SendModal({ isOpen, onClose, currency, balance, onSuccess }: Sen
                             {txHash}
                         </p>
                     </Link>
-
-                    <Button onClick={handleDone} className="w-full">
-                        Done
-                    </Button>
-                </div>
+                </SuccessScreen>
             </Modal>
         );
     }
@@ -162,12 +161,7 @@ export function SendModal({ isOpen, onClose, currency, balance, onSuccess }: Sen
                         disabled={isLoading}
                     />
                 </div>
-                {displayError && (
-                    <div className="p-4 text-center rounded-xl bg-[#0a0a0a] border border-red-500 text-red-500">
-                        <p className="font-bold text-center text-md mb-1"> An error occurred</p>
-                        {displayError}
-                    </div>
-                )}
+                <ErrorDisplay error={displayError} />
                 <Button disabled={!isValid || isLoading} onClick={handleSend} className="w-full">
                     {isLoading ? "Sending..." : "Confirm Send"}
                 </Button>

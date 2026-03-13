@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useWallets } from '@privy-io/react-auth';
 import { useWalletId } from './useWalletId';
+import { handleTransactionError } from '../utils/web3Utils';
 
 export const useTokenTransfer = () => {
     const { wallets } = useWallets();
@@ -56,22 +57,7 @@ export const useTokenTransfer = () => {
             setIsLoading(false);
         } catch (err: any) {
             console.error("Transfer Error:", err);
-
-            let msg = err.reason || err.message || "Transaction failed";
-
-            if (msg.includes("insufficient funds for gas")) {
-                msg = "Insufficient funds for gas. Please add ETH to your wallet on Base Sepolia.";
-            }
-            else if (msg.includes("transfer amount exceeds balance")) {
-                msg = "Transfer amount exceeds balance. Please try again.";
-            }
-            else if (msg.includes("reverted")) {
-                msg = "Transaction reverted. Check your inputs and try again.";
-            }
-            else {
-                msg = "Transaction failed. Please try again.";
-            }
-            setError(msg);
+            setError(handleTransactionError(err));
             setIsLoading(false);
         }
     };

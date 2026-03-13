@@ -12,6 +12,7 @@ import {
     MARKET_IDS,
 } from '../constants/contracts';
 import { useWalletId } from './useWalletId';
+import { formatBalance, getProvider, handleTransactionError, waitForBalanceIncrease, fetchMarketBorrowRate } from '../utils/web3Utils';
 
 const MXNB_DECIMALS = 6;
 const MANUAL_GAS_LIMIT = 500000n;
@@ -46,65 +47,15 @@ export const useMorphoLend = () => {
     const [totalSupplied, setTotalSupplied] = useState<number>(0);
     const [totalBorrowed, setTotalBorrowed] = useState<number>(0);
 
-    // Helper: Format with max 3 decimals
-    const formatBalance = (val: bigint, decimals: number) => {
-        const formatted = ethers.formatUnits(val, decimals);
-        const [integer, fraction] = formatted.split(".");
-        if (!fraction) return integer;
-        return `${integer}.${fraction.substring(0, 1)}`;
-    };
-
-    // Read-only provider — no wallet signing needed for reads
-    const getProvider = useCallback(() => {
-        return new ethers.JsonRpcProvider(BASE_SEPOLIA_CONFIG.rpcUrl);
-    }, []);
-
     // Fetch market details and borrow rate for APY calculation
     const fetchMarketData = useCallback(async () => {
         try {
             const provider = getProvider();
 
-            const morphoContract = new ethers.Contract(
-                CONTRACT_ADDRESSES.morphoBlue,
-                MORPHO_ABI,
-                provider
-            );
-
-            // Read market details
-            const marketDetails = await morphoContract.market(MARKET_IDS.mxnb);
-            const totalSupplyAssets = Number(ethers.formatUnits(marketDetails.totalSupplyAssets, 6));
-            const totalBorrowAssets = Number(ethers.formatUnits(marketDetails.totalBorrowAssets, 6));
+            const { totalSupplyAssets, totalBorrowAssets, borrowRate } = await fetchMarketBorrowRate(provider);
 
             setTotalSupplied(totalSupplyAssets);
             setTotalBorrowed(totalBorrowAssets);
-
-            // Read borrow rate from IRM
-            const irmContract = new ethers.Contract(
-                MXNB_MARKET_PARAMS.irm,
-                IRM_ABI,
-                provider
-            );
-
-            // Reconstruct market tuple as plain array to avoid read-only errors
-            const marketTuple = [
-                marketDetails[0],   // totalSupplyAssets
-                marketDetails[1],   // totalSupplyShares
-                marketDetails[2],   // totalBorrowAssets
-                marketDetails[3],   // totalBorrowShares
-                marketDetails[4],   // lastUpdate
-                marketDetails[5],   // fee
-            ];
-
-            const borrowRate = await irmContract.borrowRateView(
-                [
-                    MXNB_MARKET_PARAMS.loanToken,
-                    MXNB_MARKET_PARAMS.collateralToken,
-                    MXNB_MARKET_PARAMS.oracle,
-                    MXNB_MARKET_PARAMS.irm,
-                    MXNB_MARKET_PARAMS.lltv,
-                ],
-                marketTuple
-            );
 
             console.log("Market Details:", { totalSupplyAssets, totalBorrowAssets });
             console.log("Borrow Rate (per second):", borrowRate.toString());
@@ -128,7 +79,7 @@ export const useMorphoLend = () => {
         } catch (err) {
             console.error("Error fetching market data:", err);
         }
-    }, [getProvider]);
+    }, []);
 
     const refreshData = useCallback(async () => {
         try {
@@ -168,7 +119,7 @@ export const useMorphoLend = () => {
         } catch (err) {
             console.error("Error refreshing data:", err);
         }
-    }, [wallets, getProvider, fetchMarketData]);
+    }, [wallets, fetchMarketData]);
 
     useEffect(() => {
         refreshData();
@@ -187,23 +138,6 @@ export const useMorphoLend = () => {
             return () => clearTimeout(timer);
         }
     }, [error]);
-
-    const waitForBalanceIncrease = async (
-        tokenContract: ethers.Contract,
-        userAddress: string,
-        initialBalance: bigint
-    ) => {
-        let retries = 0;
-        while (retries < 15) {
-            const currentBalance = await tokenContract.balanceOf(userAddress);
-            if (currentBalance > initialBalance) return currentBalance;
-
-            console.log(`Waiting for balance update... Attempt ${retries + 1}/15`);
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            retries++;
-        }
-        throw new Error("RPC timeout: The network is slow indexing your new balance. Please wait a moment and try again.");
-    };
 
     const executeDeposit = async (amountMXNB: string) => {
         setLoading(true);
@@ -244,27 +178,13 @@ export const useMorphoLend = () => {
 
             // Success
             setStep(4); // Success state
+            await new Promise(r => setTimeout(r, 2000));
             await refreshData();
             setLoading(false);
 
         } catch (err: any) {
             console.error("Deposit Error:", err);
-            let msg = err.reason || err.message || "Transaction failed";
-
-            if (msg.includes("insufficient funds for gas")) {
-                msg = "Insufficient funds for gas. Please add ETH to your wallet on Base Sepolia.";
-            }
-            else if (msg.includes("transfer amount exceeds balance")) {
-                msg = "Transfer amount exceeds balance. Please try again.";
-            }
-            else if (msg.includes("reverted")) {
-                msg = "Transaction reverted. Check your inputs and try again.";
-            }
-            else {
-                msg = "Transaction failed. Please try again.";
-            }
-            setError(msg);
-
+            setError(handleTransactionError(err));
             setLoading(false);
         }
     };
@@ -326,21 +246,7 @@ export const useMorphoLend = () => {
 
         } catch (err: any) {
             console.error("Withdraw Error:", err);
-            let msg = err.reason || err.message || "Transaction failed";
-
-            if (msg.includes("insufficient funds for gas")) {
-                msg = "Insufficient funds for gas. Please add ETH to your wallet on Base Sepolia.";
-            }
-            else if (msg.includes("transfer amount exceeds balance")) {
-                msg = "Transfer amount exceeds balance. Please try again.";
-            }
-            else if (msg.includes("reverted")) {
-                msg = "Transaction reverted. Check your inputs and try again.";
-            }
-            else {
-                msg = "Transaction failed. Please try again.";
-            }
-            setError(msg);
+            setError(handleTransactionError(err));
             setLoading(false);
         }
     };

@@ -14,6 +14,7 @@ import {
     MARKET_IDS,
 } from '../constants/contracts';
 import { useWalletId } from './useWalletId';
+import { formatBalance, getProvider, handleTransactionError, waitForBalanceIncrease, fetchMarketBorrowRate } from '../utils/web3Utils';
 
 const TARGET_LTV = 0.50; // Conservative LTV target for calculation
 const USDC_DECIMALS = 6;
@@ -44,47 +45,14 @@ export const useMorphoLoan = () => {
     const [totalSupplied, setTotalSupplied] = useState<number>(0);
     const [totalBorrowed, setTotalBorrowed] = useState<number>(0);
 
-    // Helper: Format with max 3 decimals
-    const formatBalance = (val: bigint, decimals: number) => {
-        const formatted = ethers.formatUnits(val, decimals);
-        const [integer, fraction] = formatted.split(".");
-        if (!fraction) return integer;
-        return `${integer}.${fraction.substring(0, 1)}`;
-    };
-
-    // Read-only provider — no wallet signing needed for reads
-    const getProvider = useCallback(() => {
-        return new ethers.JsonRpcProvider(BASE_SEPOLIA_CONFIG.rpcUrl);
-    }, []);
-
     const fetchMarketAPR = useCallback(async () => {
         try {
             const provider = getProvider();
-            const morpho = new ethers.Contract(CONTRACT_ADDRESSES.morphoBlue, MORPHO_ABI, provider);
-
-            const marketDetails = await morpho.market(MARKET_IDS.mxnb);
-            const totalSupplyAssets = Number(ethers.formatUnits(marketDetails.totalSupplyAssets, MXNB_DECIMALS));
-            const totalBorrowAssets = Number(ethers.formatUnits(marketDetails.totalBorrowAssets, MXNB_DECIMALS));
+            
+            const { totalSupplyAssets, totalBorrowAssets, borrowRate } = await fetchMarketBorrowRate(provider);
 
             setTotalSupplied(totalSupplyAssets);
             setTotalBorrowed(totalBorrowAssets);
-
-            const irmContract = new ethers.Contract(MXNB_MARKET_PARAMS.irm, IRM_ABI, provider);
-            const marketTuple = [
-                marketDetails[0], marketDetails[1], marketDetails[2],
-                marketDetails[3], marketDetails[4], marketDetails[5],
-            ];
-
-            const borrowRate = await irmContract.borrowRateView(
-                [
-                    MXNB_MARKET_PARAMS.loanToken,
-                    MXNB_MARKET_PARAMS.collateralToken,
-                    MXNB_MARKET_PARAMS.oracle,
-                    MXNB_MARKET_PARAMS.irm,
-                    MXNB_MARKET_PARAMS.lltv,
-                ],
-                marketTuple
-            );
 
             const borrowRateDecimal = Number(borrowRate) / 1e18;
             const secondsPerYear = 60 * 60 * 24 * 365;
@@ -94,7 +62,7 @@ export const useMorphoLoan = () => {
         } catch (err) {
             console.error("Error fetching market APR:", err);
         }
-    }, [getProvider]);
+    }, []);
 
     const refreshData = useCallback(async () => {
         try {
@@ -151,7 +119,7 @@ export const useMorphoLoan = () => {
         } catch (err) {
             console.error("Error refreshing data:", err);
         }
-    }, [wallets, getProvider, fetchMarketAPR]);
+    }, [wallets, fetchMarketAPR]);
 
     useEffect(() => {
         refreshData();
@@ -191,17 +159,6 @@ export const useMorphoLoan = () => {
             console.error("Error calculating deposit:", e);
             return "0";
         }
-    };
-
-    const waitForBalanceIncrease = async (tokenContract: ethers.Contract, userAddress: string, initialBalance: bigint) => {
-        let retries = 0;
-        while (retries < 15) {
-            const currentBalance = await tokenContract.balanceOf(userAddress);
-            if (currentBalance > initialBalance) return currentBalance;
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            retries++;
-        }
-        return await tokenContract.balanceOf(userAddress);
     };
 
     const executeZale = async (borrowAmountMXNB: string) => {
@@ -305,29 +262,13 @@ export const useMorphoLoan = () => {
 
             setStep(8); // Complete
             // Delay de sincronización para que el RPC indexe los nuevos balances antes de refrescar la UI
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 2000));
             await refreshData();
             setLoading(false);
 
         } catch (err: any) {
             console.error("Zale error:", err);
-
-            let msg = err.reason || err.message || "Transaction failed";
-
-            if (msg.includes("insufficient funds for gas")) {
-                msg = "Insufficient funds for gas. Please add ETH to your wallet on Base Sepolia.";
-            }
-            else if (msg.includes("transfer amount exceeds balance")) {
-                msg = "Transfer amount exceeds balance. Please try again.";
-            }
-            else if (msg.includes("reverted")) {
-                msg = "Transaction reverted. Check your inputs and try again.";
-            }
-            else {
-                msg = "Transaction failed. Please try again.";
-            }
-            setError(msg);
-
+            setError(handleTransactionError(err));
         } finally {
             if (step !== 8 && step < 9) {
                 setLoading(false);
@@ -476,27 +417,13 @@ export const useMorphoLoan = () => {
             }
 
             // Delay de sincronización para que el RPC indexe los nuevos balances antes de refrescar la UI
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 2000));
             await refreshData();
             setLoading(false);
 
         } catch (err: any) {
             console.error("Repay Error:", err);
-            let msg = err.reason || err.message || "Transaction failed";
-
-            if (msg.includes("insufficient funds for gas")) {
-                msg = "Insufficient funds for gas. Please add ETH to your wallet on Base Sepolia.";
-            }
-            else if (msg.includes("transfer amount exceeds balance")) {
-                msg = "Transfer amount exceeds balance. Please try again.";
-            }
-            else if (msg.includes("reverted")) {
-                msg = "Transaction reverted. Check your inputs and try again.";
-            }
-            else {
-                msg = "Transaction failed. Please try again.";
-            }
-            setError(msg);
+            setError(handleTransactionError(err));
             setLoading(false);
         } finally {
             if (step !== 16 && step >= 11) {

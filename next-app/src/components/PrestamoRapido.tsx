@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMorphoLoan } from "../hooks/useMorphoLoan";
 import { usePrivy } from "@privy-io/react-auth";
 import { CheckCircleIcon, ArrowPathIcon, BanknotesIcon, CircleStackIcon, LockClosedIcon, CreditCardIcon, ChartBarIcon } from "@heroicons/react/24/outline";
 import Button from "./Button";
 import BalancesGrid from "./BalancesGrid";
 import Input from "./Input";
+import AppCard from "./AppCard";
+import ErrorDisplay from "./ErrorDisplay";
+import SuccessScreen from "./SuccessScreen";
+import ProgressStepper from "./ProgressStepper";
 
 export default function PrestamoRapido() {
     const { authenticated, login } = usePrivy();
@@ -52,18 +56,29 @@ export default function PrestamoRapido() {
     };
 
     // Derived state for validation
-    const isExceedingLiquidity = Boolean(borrowAmount) && parseFloat(borrowAmount) > parseFloat(marketLiquidity);
-    const isInsufficientBalance = parseFloat(usdcBalance) < parseFloat(requiredDeposit || "0");
-    const isInsufficientBalanceWithdraw = rawMxnbBalance <= rawBorrowBalance;
+    const isExceedingLiquidity = useMemo(() => {
+        return Boolean(borrowAmount) && parseFloat(borrowAmount) > parseFloat(marketLiquidity);
+    }, [borrowAmount, marketLiquidity]);
+
+    const isInsufficientBalance = useMemo(() => {
+        return parseFloat(usdcBalance) < parseFloat(requiredDeposit || "0");
+    }, [usdcBalance, requiredDeposit]);
+
+    const isInsufficientBalanceWithdraw = useMemo(() => {
+        return rawMxnbBalance <= rawBorrowBalance;
+    }, [rawMxnbBalance, rawBorrowBalance]);
+
+    const isBorrowDisabled = useMemo(() => {
+        return loading || !borrowAmount || parseFloat(borrowAmount) <= 0 || isInsufficientBalance || isExceedingLiquidity;
+    }, [loading, borrowAmount, isInsufficientBalance, isExceedingLiquidity]);
+
+    const hasDebt = useMemo(() => {
+        return parseFloat(borrowBalance) > 0;
+    }, [borrowBalance]);
 
     return (
-        <div className="w-full max-w-md mx-auto p-1">
-            <div className="relative overflow-hidden rounded-2xl bg-[#0a0a0a] border border-[#264c73] shadow-2xl backdrop-blur-xl">
-                {/* Header Background Gradient */}
-                <div className="absolute top-0 left-0 w-full h-32 pointer-events-none" />
-
-                <div className="relative p-6 sm:p-8">
-                    <div className="flex items-center justify-between mb-8">
+        <AppCard>
+            <div className="flex items-center justify-between mb-8">
                         <div>
                             <h2 className="text-2xl mb-2 border-b-4 border-[#264c73] font-bold text-white">
                                 Quick Loan
@@ -120,66 +135,48 @@ export default function PrestamoRapido() {
                             />
 
                             {step === 8 ? (
-                                <div className="py-8 text-center space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
-                                    <div className="w-20 h-20 bg-[#0a0a0a] rounded-full flex items-center justify-center mx-auto border border-[#4fe3c3]">
-                                        <CheckCircleIcon className="w-10 h-10 text-[#4fe3c3]" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-2xl font-bold text-white mb-2">Operation Successful!</h3>
-                                        <p className="text-gray-200">
-                                            You received <span className="text-[#4fe3c3] font-bold text-lg">{borrowAmount} MXNB</span>
-                                        </p>
-                                    </div>
-
-                                    <Button
-                                        onClick={() => {
-                                            setBorrowAmount("");
-                                            resetState();
-                                        }}
-                                        className="transform hover:-translate-y-1"
-                                    >
-                                        Perform Another Operation
-                                    </Button>
-                                </div>
+                                <SuccessScreen
+                                    title="Operation Successful!"
+                                    buttonText="Perform Another Operation"
+                                    onButtonClick={() => {
+                                        setBorrowAmount("");
+                                        resetState();
+                                    }}
+                                >
+                                    <p className="text-gray-200">
+                                        You received <span className="text-[#4fe3c3] font-bold text-lg">{borrowAmount} MXNB</span>
+                                    </p>
+                                </SuccessScreen>
                             ) : step === 16 ? (
-                                <div className="py-8 text-center space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
-                                    <div className="w-20 h-20 bg-[#0a0a0a] rounded-full flex items-center justify-center mx-auto border border-[#4fe3c3]">
-                                        <CheckCircleIcon className="w-10 h-10 text-[#4fe3c3]" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-2xl font-bold text-white mb-2">Payment Successful!</h3>
-                                        <div className="text-sm bg-[#0a0a0a] border border-[#264c73] p-4 rounded-lg space-y-2 text-left">
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-200">Status:</span>
-                                                <span className="text-[#4fe3c3]">Debt Repaid</span>
-                                            </div>
-                                            {parseFloat(userPaidSubsidyInUSDC || "0") > 0 && (
-                                                <>
-                                                    <div className="h-px bg-[#264c73] my-6" />
-                                                    <div className="text-center">
-                                                        <div className="text-xs text-[#4fe3c3] font-semibold mb-2 flex items-center justify-center gap-1">
-                                                            💰 We've subsidized your loan interest!!!
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex flex-col items-center justify-center gap-2">
-                                                        <span className="text-gray-200">We gave you (approx.):</span>
-                                                        <span className="text-xl text-[#4fe3c3] font-bold font-mono">$USD {userPaidSubsidyInUSDC}</span>
-                                                    </div>
-                                                </>
-                                            )}
+                                <SuccessScreen
+                                    title="Payment Successful!"
+                                    buttonText="Back to Home"
+                                    onButtonClick={() => {
+                                        setBorrowAmount("");
+                                        resetState();
+                                    }}
+                                >
+                                    <div className="text-sm bg-[#0a0a0a] border border-[#264c73] p-4 rounded-lg space-y-2 text-left">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-200">Status:</span>
+                                            <span className="text-[#4fe3c3]">Debt Repaid</span>
                                         </div>
+                                        {parseFloat(userPaidSubsidyInUSDC || "0") > 0 && (
+                                            <>
+                                                <div className="h-px bg-[#264c73] my-6" />
+                                                <div className="text-center">
+                                                    <div className="text-xs text-[#4fe3c3] font-semibold mb-2 flex items-center justify-center gap-1">
+                                                        💰 We've subsidized your loan interest!!!
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-center justify-center gap-2">
+                                                    <span className="text-gray-200">We gave you (approx.):</span>
+                                                    <span className="text-xl text-[#4fe3c3] font-bold font-mono">$USD {userPaidSubsidyInUSDC}</span>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
-
-                                    <Button
-                                        onClick={() => {
-                                            setBorrowAmount("");
-                                            resetState();
-                                        }}
-                                        className="transform hover:-translate-y-1"
-                                    >
-                                        Back to Home
-                                    </Button>
-                                </div>
+                                </SuccessScreen>
                             ) : (
                                 /* Input Section */
                                 <div className="space-y-6 py-6">
@@ -216,52 +213,27 @@ export default function PrestamoRapido() {
 
                                     {/* Progress Stepper (Visible when loading) */}
                                     {loading && (
-                                        <div className="space-y-3 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        <>
                                             {step < 11 ? (
-                                                <>
-                                                    <div className="flex justify-between text-xs text-gray-200 uppercase tracking-widest mb-1">
-                                                        <span>Processing Loan...</span>
-                                                        <span>{Math.min(step, 7)} / 7</span>
-                                                    </div>
-                                                    <div className="h-2 w-full bg-[#264c73] rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-[#4fe3c3] transition-all duration-500 ease-out"
-                                                            style={{ width: `${(step / 7) * 100}%` }}
-                                                        />
-                                                    </div>
-                                                    <p className="text-center text-sm text-[#4fe3c3] font-medium animate-pulse">
-                                                        {step === 0 ? "Starting..." :
-                                                            step > 7 ? "Ready!" :
-                                                                steps[step - 1]}
-                                                    </p>
-                                                </>
+                                                <ProgressStepper
+                                                    title="Processing Loan..."
+                                                    currentStep={step}
+                                                    totalSteps={7}
+                                                    stepLabel={step === 0 ? "Starting..." : step > 7 ? "Ready!" : steps[step - 1]}
+                                                />
                                             ) : (
-                                                <>
-                                                    <div className="flex justify-between text-xs text-gray-200 uppercase tracking-widest mb-1">
-                                                        <span>Processing Payment...</span>
-                                                        <span>{Math.min(step - 10, 5)} / 5</span>
-                                                    </div>
-                                                    <div className="h-2 w-full bg-[#264c73] rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-[#4fe3c3] transition-all duration-500 ease-out"
-                                                            style={{ width: `${((step - 10) / 5) * 100}%` }}
-                                                        />
-                                                    </div>
-                                                    <p className="text-center text-sm text-[#4fe3c3] font-medium animate-pulse">
-                                                        {getRepayStepLabel(step)}
-                                                    </p>
-                                                </>
+                                                <ProgressStepper
+                                                    title="Processing Payment..."
+                                                    currentStep={step - 10}
+                                                    totalSteps={5}
+                                                    stepLabel={getRepayStepLabel(step)}
+                                                />
                                             )}
-                                        </div>
+                                        </>
                                     )}
 
                                     {/* Error Message */}
-                                    {error && (
-                                        <div className="p-4 text-center rounded-xl bg-[#0a0a0a] border border-red-400 text-red-500">
-                                            <p className="font-bold text-md text-center mb-1">An error occurred</p>
-                                            {error}
-                                        </div>
-                                    )}
+                                    <ErrorDisplay error={error} />
 
                                     {/* Success Message */}
                                     {step === 8 && !loading && (
@@ -274,7 +246,7 @@ export default function PrestamoRapido() {
 
                                     <Button
                                         onClick={handleBorrow}
-                                        disabled={loading || !borrowAmount || parseFloat(borrowAmount) <= 0 || isInsufficientBalance || isExceedingLiquidity}
+                                        disabled={isBorrowDisabled}
                                     >
                                         {loading ? (
                                             <span className="flex items-center justify-center gap-2 text-[#4fe3c3]">
@@ -289,7 +261,7 @@ export default function PrestamoRapido() {
                                     </Button>
 
                                     {/* Repay Button - Only show if user has debt or collateral */}
-                                    {(!loading && (parseFloat(borrowBalance) > 0)) && (
+                                    {(!loading && hasDebt) && (
                                         <Button
                                             onClick={executeRepayAndWithdraw}
                                             isWithdraw
@@ -303,8 +275,6 @@ export default function PrestamoRapido() {
                             )}
                         </>
                     )}
-                </div>
-            </div >
-        </div >
+        </AppCard>
     );
 }

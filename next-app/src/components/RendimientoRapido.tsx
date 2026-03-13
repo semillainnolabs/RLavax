@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMorphoLend } from "../hooks/useMorphoLend";
 import { usePrivy } from "@privy-io/react-auth";
 import {
@@ -15,6 +15,10 @@ import {
 import Button from "./Button";
 import BalancesGrid from "./BalancesGrid";
 import Input from "./Input";
+import AppCard from "./AppCard";
+import ErrorDisplay from "./ErrorDisplay";
+import SuccessScreen from "./SuccessScreen";
+import ProgressStepper from "./ProgressStepper";
 
 export default function RendimientoRapido() {
     const { authenticated, login } = usePrivy();
@@ -63,17 +67,21 @@ export default function RendimientoRapido() {
     };
 
     // Derived states
-    const hasLiquidity = parseFloat(vaultAssetsBalance) > 0;
-    const isInsufficientBalance = depositAmount && parseFloat(depositAmount) > parseFloat(mxnbBalance);
+    const hasLiquidity = useMemo(() => {
+        return parseFloat(vaultAssetsBalance) > 0;
+    }, [vaultAssetsBalance]);
+
+    const isInsufficientBalance = useMemo(() => {
+        return Boolean(depositAmount) && parseFloat(depositAmount) > parseFloat(mxnbBalance);
+    }, [depositAmount, mxnbBalance]);
+
+    const isDepositDisabled = useMemo(() => {
+        return loading || !depositAmount || parseFloat(depositAmount) <= 0 || isInsufficientBalance;
+    }, [loading, depositAmount, isInsufficientBalance]);
 
     return (
-        <div className="w-full max-w-md mx-auto p-1">
-            <div className="relative overflow-hidden rounded-2xl bg-[#0a0a0a] border border-[#264c73] shadow-2xl backdrop-blur-xl">
-
-                <div className="absolute top-0 left-0 w-full h-28 pointer-events-none" />
-
-                <div className="relative p-6 sm:p-8">
-                    <div className="flex items-center justify-between mb-8">
+        <AppCard>
+            <div className="flex items-center justify-between mb-8">
                         <div>
                             <h2 className="text-2xl w-fit mb-2 border-b-4 border-[#264c73] font-bold text-white">
                                 MXNB Yield
@@ -114,41 +122,29 @@ export default function RendimientoRapido() {
                             {/* Main Content Area */}
                             {step === 4 && !loading ? (
                                 /* Success Screen (Deposit) */
-                                <div className="py-8 text-center space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
-                                    <div className="w-20 h-20 bg-[#0a0a0a] rounded-full flex items-center justify-center mx-auto border border-[#4fe3c3]">
-                                        <CheckCircleIcon className="w-10 h-10 text-[#4fe3c3]" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-2xl font-bold text-white mb-2">Deposit Successful!</h3>
-                                        <p className="text-gray-200">
-                                            Your liquidity has been successfully added.
-                                        </p>
-                                    </div>
-
-                                    <Button onClick={handleReset} className="transform hover:-translate-y-1">
-                                        Make Another Deposit
-                                    </Button>
-                                </div>
+                                <SuccessScreen
+                                    title="Deposit Successful!"
+                                    buttonText="Make Another Deposit"
+                                    onButtonClick={handleReset}
+                                >
+                                    <p className="text-gray-200">
+                                        Your liquidity has been successfully added.
+                                    </p>
+                                </SuccessScreen>
                             ) : step === 12 && !loading ? (
                                 /* Success Screen (Withdrawal) */
-                                <div className="py-8 text-center space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
-                                    <div className="w-20 h-20 bg-[#0a0a0a] rounded-full flex items-center justify-center mx-auto border border-[#4fe3c3]">
-                                        <CheckCircleIcon className="w-10 h-10 text-[#4fe3c3]" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-2xl font-bold text-white mb-2">Withdrawal Successful!</h3>
-                                        <div className="text-sm bg-[#0a0a0a] border border-[#264c73] p-4 rounded-lg space-y-2 text-left">
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-200">Total Withdrawn:</span>
-                                                <span className="text-[#4fe3c3] font-mono">{withdrawnAmount} MXNB</span>
-                                            </div>
+                                <SuccessScreen
+                                    title="Withdrawal Successful!"
+                                    buttonText="Back to Home"
+                                    onButtonClick={handleReset}
+                                >
+                                    <div className="text-sm bg-[#0a0a0a] border border-[#264c73] p-4 rounded-lg space-y-2 text-left">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-200">Total Withdrawn:</span>
+                                            <span className="text-[#4fe3c3] font-mono">{withdrawnAmount} MXNB</span>
                                         </div>
                                     </div>
-
-                                    <Button onClick={handleReset} className="transform hover:-translate-y-1">
-                                        Back to Home
-                                    </Button>
-                                </div>
+                                </SuccessScreen>
                             ) : (
                                 /* Input Section */
                                 <div className="space-y-6 py-2">
@@ -166,47 +162,22 @@ export default function RendimientoRapido() {
 
                                     {/* Progress Stepper */}
                                     {loading && (
-                                        <div className="space-y-3 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                            <div className="flex justify-between text-xs text-gray-200 uppercase tracking-widest mb-1">
-                                                <span>
-                                                    {step >= 11 ? "Processing Withdrawal..." : "Processing Deposit..."}
-                                                </span>
-                                                <span>
-                                                    {step >= 11 ? "1 / 1" : `${Math.min(step, 3)} / 3`}
-                                                </span>
-                                            </div>
-                                            <div className="h-2 w-full bg-[#264c73] rounded-full overflow-hidden">
-                                                {step >= 11 ? (
-                                                    <div
-                                                        className="h-full bg-[#4fe3c3] transition-all duration-500 ease-out animate-pulse"
-                                                        style={{ width: "100%" }}
-                                                    />
-                                                ) : (
-                                                    <div
-                                                        className="h-full bg-[#4fe3c3] transition-all duration-500 ease-out"
-                                                        style={{ width: `${(step / 3) * 100}%` }}
-                                                    />
-                                                )}
-                                            </div>
-                                            <p className={`text-center text-sm font-medium animate-pulse text-[#4fe3c3]`}>
-                                                {getStepLabel(step)}
-                                            </p>
-                                        </div>
+                                        <ProgressStepper
+                                            title={step >= 11 ? "Processing Withdrawal..." : "Processing Deposit..."}
+                                            currentStep={step >= 11 ? 1 : step}
+                                            totalSteps={step >= 11 ? 1 : 3}
+                                            stepLabel={getStepLabel(step)}
+                                        />
                                     )}
 
                                     {/* Error Message */}
-                                    {error && (
-                                        <div className="p-4 text-center rounded-xl bg-[#0a0a0a] border border-red-500 text-red-500">
-                                            <p className="font-bold text-center text-md mb-1"> An error occurred</p>
-                                            {error}
-                                        </div>
-                                    )}
+                                    <ErrorDisplay error={error} />
 
                                     {/* Deposit Button */}
                                     {!loading && (
                                         <Button
                                             onClick={handleDeposit}
-                                            disabled={!!(!depositAmount || parseFloat(depositAmount) <= 0 || isInsufficientBalance)}
+                                            disabled={isDepositDisabled}
                                         >
                                             Deposit MXNB
                                         </Button>
@@ -226,8 +197,6 @@ export default function RendimientoRapido() {
                             )}
                         </>
                     )}
-                </div>
-            </div>
-        </div>
+        </AppCard>
     );
 }
